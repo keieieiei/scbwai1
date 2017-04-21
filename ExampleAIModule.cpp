@@ -489,6 +489,12 @@ void ExampleAIModule::onUnitMorph(BWAPI::Unit unit)
   {
     CIA::Instance().removeLivingUnitType(UnitTypes::Zerg_Larva);
   }
+  else if (Broodwar->self()->allUnitCount(UnitTypes::Zerg_Egg) == 0)
+  {
+    CIA::Instance().removeLivingUnitType(UnitTypes::Zerg_Egg);
+  }
+  // add the newly born fucker
+  CIA::Instance().addLivingUnitType(unit->getType());
 }
 
 void ExampleAIModule::onUnitRenegade(BWAPI::Unit unit)
