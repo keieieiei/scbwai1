@@ -455,7 +455,7 @@ void ExampleAIModule::onUnitDestroy(BWAPI::Unit unit)
     --droneCount;
   }
 
-  Broodwar->sendText("FAREWELL bb %2", unit->getType().c_str());
+  Broodwar->sendText("FAREWELL bb %s", unit->getType().c_str());
 
   // remove unit type from living unit list if population hits 0
   if (Broodwar->self()->allUnitCount(unit->getType()) == 0)
