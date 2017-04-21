@@ -10,8 +10,8 @@ public:
 
   std::vector<BWAPI::UnitType> _livingUnitTypes;
   int _thisPlayer;
-  void addLivingUnitType(BWAPI::UnitType);
-  void removeLivingUnitType(BWAPI::UnitType);
+  void addLivingUnitType(BWAPI::UnitType u);
+  void removeLivingUnitType(BWAPI::UnitType u);
 
   static CIA & Instance(){
     static CIA instance;
