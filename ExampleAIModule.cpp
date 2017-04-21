@@ -484,18 +484,22 @@ void ExampleAIModule::onUnitMorph(BWAPI::Unit unit)
   // print all morph args
   Broodwar->sendText("a fuckin %s morphed", unit->getType().c_str());
 
-  // every +1 egg == -1 larva; remove larva from living unit list if it hits 0
-  if (unit->getType() == UnitTypes::Zerg_Egg && Broodwar->self()->allUnitCount(UnitTypes::Zerg_Larva) == 0)
+  // first check for owner
+  if (unit->getPlayer()->getID() == CIA::Instance()._thisPlayer)
   {
-    CIA::Instance().removeLivingUnitType(UnitTypes::Zerg_Larva);
+    // every +1 egg == -1 larva; remove larva from living unit list if it hits 0
+    if (unit->getType() == UnitTypes::Zerg_Egg && Broodwar->self()->allUnitCount(UnitTypes::Zerg_Larva) == 0)
+    {
+      CIA::Instance().removeLivingUnitType(UnitTypes::Zerg_Larva);
+    }
+    //SHOULD PROLLY FIX - morphing can happen from non-eggs
+    else if (Broodwar->self()->allUnitCount(UnitTypes::Zerg_Egg) == 0)
+    {
+      CIA::Instance().removeLivingUnitType(UnitTypes::Zerg_Egg);
+    }
+    // add the newly born fucker
+    CIA::Instance().addLivingUnitType(unit->getType());
   }
-  //SHOULD PROLLY FIX
-  else if (Broodwar->self()->allUnitCount(UnitTypes::Zerg_Egg) == 0)
-  {
-    CIA::Instance().removeLivingUnitType(UnitTypes::Zerg_Egg);
-  }
-  // add the newly born fucker
-  CIA::Instance().addLivingUnitType(unit->getType());
 }
 
 void ExampleAIModule::onUnitRenegade(BWAPI::Unit unit)
