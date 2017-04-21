@@ -455,10 +455,18 @@ void ExampleAIModule::onUnitDestroy(BWAPI::Unit unit)
     --droneCount;
   }
 
-  Broodwar->sendText("FAREWELL bb %s", unit->getType().c_str());
+  if (unit->getPlayer()->getID() == CIA::Instance()._thisPlayer)
+  {
+    Broodwar->sendText("FAREWELL bb %s", unit->getType().c_str());
+  } 
+  else
+  {
+    Broodwar->sendText("RIP enemy %s", unit->getType().c_str());
+  }
+  
 
   // remove unit type from living unit list if population hits 0
-  if (Broodwar->self()->allUnitCount(unit->getType()) == 0)
+  if (unit->getPlayer()->getID() == CIA::Instance()._thisPlayer && Broodwar->self()->allUnitCount(unit->getType()) == 0)
   {
     CIA::Instance().removeLivingUnitType(unit->getType());
   }
@@ -532,7 +540,7 @@ void ExampleAIModule::onUnitComplete(BWAPI::Unit unit)
   if (unit->getType() == UnitTypes::Zerg_Drone)
     ++droneCount;
 
-  // add unit type to list
+  // add unit type to list if we own it
   if (unit->getPlayer()->getID() == CIA::Instance()._thisPlayer)
   {
     CIA::Instance().addLivingUnitType(unit->getType());
