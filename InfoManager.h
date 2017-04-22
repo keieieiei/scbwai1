@@ -1,5 +1,6 @@
 #pragma once
 #include <BWAPI.h>
+#include "UnitInfo.h"
 #include <vector>
 
 class InfoManager
@@ -8,7 +9,7 @@ private:
   int thisPlayerID;
   std::vector<BWAPI::UnitType> livingUnitTypes;
 
-  BWAPI::Unitset enemyUnits = {};
+  std::vector<UnitInfo> enemyUnitsInfo; // don't want pointers here, the game blacks them out when no visible
   std::vector<BWAPI::UnitType> enemyUnitTypes;
 
   BWAPI::Unitset testEnemyUnits = {};
@@ -29,11 +30,13 @@ public:
 
 
   std::vector<BWAPI::UnitType> getEnemyUnitTypes();
-  BWAPI::Unitset getEnemyUnits();
+  std::vector<UnitInfo> getEnemyUnitsInfo();
   void addEnemyUnit(BWAPI::Unit u);
   void removeEnemyUnit(BWAPI::Unit u);
   int numEnemyType(BWAPI::UnitType ut);
   void cleanUpEnemyTypes(); // fix cleanUpUnitTypeList to work with both later...?
+
+  void debugEnemy();
 
   static InfoManager & Instance(){
     static InfoManager instance;

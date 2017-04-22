@@ -4,7 +4,7 @@ InfoManager::InfoManager()
 {
   thisPlayerID = 0;
   livingUnitTypes = { };
-  enemyUnits = {};
+  enemyUnitsInfo = {};
 }
 
 
@@ -64,38 +64,49 @@ std::vector<BWAPI::UnitType> InfoManager::getEnemyUnitTypes()
   return enemyUnitTypes;
 }
 
-BWAPI::Unitset InfoManager::getEnemyUnits()
+std::vector<UnitInfo> InfoManager::getEnemyUnitsInfo()
 {
-  return enemyUnits;
+  return enemyUnitsInfo;
 }
 
 void InfoManager::addEnemyUnit(BWAPI::Unit u)
 {
-  // insert can't tell if it's a dup, so check.
+  printf("Received request to add enemy %s id %d\n", u->getType().c_str(), u->getID());
+  // insert can't tell if it's a dup for morphed things?, so check via ID.
   bool has = false;
-  for (auto ux : enemyUnits) {
-    if (ux->getID() == u->getID()){
-      has = true;    
+  for (auto &ux : enemyUnitsInfo) {
+    if (ux.getID() == u->getID()){
+      has = true;
+      // update the type if necessary (morphs, etc)
+      if (ux.getType() != u->getType()) {
+        ux.setType(u->getType());
+      }
       break;
     }
   }
 
-  if (!has) enemyUnits.insert(u);
+  if (!has){
+    UnitInfo newU(u->getID(), u->getType());
+    enemyUnitsInfo.push_back(newU);
+    printf("Added enemy unit %s id %d\n", u->getType().c_str(), u->getID());
+  }
   addLivingUnitType(u->getType(), enemyUnitTypes);
 }
 
 void InfoManager::removeEnemyUnit(BWAPI::Unit u)
 {
-  enemyUnits.erase(u);
+  auto ui = std::find(enemyUnitsInfo.begin(), enemyUnitsInfo.end(), u);
+  if (ui != enemyUnitsInfo.end()) enemyUnitsInfo.erase(ui);
+
   removeLivingUnitType(u->getType(), enemyUnitTypes);
 }
 
 int InfoManager::numEnemyType(BWAPI::UnitType ut)
 {
   int num = 0;
-  for (auto &u : enemyUnits)
+  for (auto u : enemyUnitsInfo)
   {
-    if (u->getType() == ut) num++;
+    if (u.getType() == ut) num++;
   }
   return num;
 }
@@ -107,4 +118,14 @@ void InfoManager::cleanUpEnemyTypes()
       removeLivingUnitType(ut, enemyUnitTypes);
     }
   }
+}
+
+void InfoManager::debugEnemy()
+{
+  printf("last known enemy units: %d\n", enemyUnitsInfo.size());
+  printf("# of types: %d\n", enemyUnitTypes.size());
+  for (auto &u : enemyUnitsInfo) {
+    printf("%s %d\n", u.getType().c_str(), u.getID());
+  }
+
 }

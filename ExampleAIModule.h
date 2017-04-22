@@ -4,6 +4,7 @@
 #include <Windows.h>
 #include "InfoManager.h"
 #include "BaseManager.h"
+#include "UnitInfo.h"
 
 DWORD WINAPI AnalyzeThread();
 

@@ -23,8 +23,6 @@ int mineralBuffer;
 // holds the row position to avoid overlap
 int rowPos;
 BaseManager *mainManager;
-// reserve drone for manual movement
-int reserve;
 
 void ExampleAIModule::onStart()
 {
@@ -100,6 +98,13 @@ void ExampleAIModule::onStart()
     }
   }
   mainManager = new BaseManager(m, l);
+
+  FILE *df;
+  AllocConsole();
+  freopen_s(&df, "conin$", "r", stdin);
+  freopen_s(&df, "conout$", "w", stdout);
+  freopen_s(&df, "conout$", "w", stderr);
+  printf("Debugging Window:\n");
 }
 
 void ExampleAIModule::onEnd(bool isWinner)
@@ -112,6 +117,9 @@ void ExampleAIModule::onEnd(bool isWinner)
 
   delete mainManager;
   mainManager = nullptr;
+
+  printf("end");
+  FreeConsole();
 }
 
 void ExampleAIModule::onFrame()
@@ -179,7 +187,7 @@ void ExampleAIModule::onFrame()
     Broodwar->drawTextScreen(500, rowPos, "%s: %d", ut.c_str(), InfoManager::Instance().numEnemyType(ut));
     rowPos += 20;
   }
-  Broodwar->drawTextScreen(500, rowPos, "# Known Enemy Units: %d", InfoManager::Instance().getEnemyUnits().size());
+  Broodwar->drawTextScreen(500, rowPos, "# Known Enemy Units: %d", InfoManager::Instance().getEnemyUnitsInfo().size());
 
   // TESTING:  move back to end of onFrame()
   mainManager->update();
@@ -298,7 +306,7 @@ void ExampleAIModule::onFrame()
       }
     }
     // If the unit is a worker unit
-    else if (u->getType().isWorker() && reserve != u->getID())
+    else if (u->getType().isWorker())
     {
 
 
@@ -433,6 +441,11 @@ void ExampleAIModule::onSendText(std::string text)
 
   // Make sure to use %s and pass the text as a parameter,
   // otherwise you may run into problems when you use the %(percent) character!
+
+  //debug trigger
+  if (text == "print enemy") {
+    InfoManager::Instance().debugEnemy();
+  }
 }
 
 void ExampleAIModule::onReceiveText(BWAPI::Player player, std::string text)
@@ -471,7 +484,8 @@ void ExampleAIModule::onUnitDiscover(BWAPI::Unit unit)
   {
     InfoManager::Instance().addEnemyUnit(unit);
   }
-  Broodwar->sendText("%s has been discovered.", unit->getType().c_str());
+  // notes: triggers after units are created, but not when morphed
+  //printf("%s has been discovered.\n", unit->getType().c_str());
 }
 
 void ExampleAIModule::onUnitEvade(BWAPI::Unit unit)
@@ -501,7 +515,7 @@ void ExampleAIModule::onUnitCreate(BWAPI::Unit unit)
   }
 
   if (InfoManager::Instance().ownedByPlayer(unit)) {
-    Broodwar->sendText("%s has been created.", unit->getType().c_str());
+    printf("%s has been created.\n", unit->getType().c_str());
   }
 }
 
