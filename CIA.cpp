@@ -4,7 +4,7 @@ CIA::CIA()
 {
 }
 
-void CIA::addLivingUnitType(BWAPI::UnitType u)
+void CIA::addLivingUnitType(BWAPI::UnitType unitType)
 {
   auto ut = std::find(_livingUnitTypes.begin(), _livingUnitTypes.end(), unitType);
   if (ut == _livingUnitTypes.end())
@@ -13,7 +13,7 @@ void CIA::addLivingUnitType(BWAPI::UnitType u)
   }
 }
 
-void CIA::removeLivingUnitType(BWAPI::UnitType u)
+void CIA::removeLivingUnitType(BWAPI::UnitType unitType)
 {
   auto ut = std::find(_livingUnitTypes.begin(), _livingUnitTypes.end(), unitType);
   if (ut != _livingUnitTypes.end())

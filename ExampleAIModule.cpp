@@ -107,6 +107,9 @@ void ExampleAIModule::onEnd(bool isWinner)
   {
     // Log your win here!
   }
+
+  delete mainManager;
+  mainManager = nullptr;
 }
 
 void ExampleAIModule::onFrame()
@@ -116,6 +119,7 @@ void ExampleAIModule::onFrame()
   // Display the game frame rate as text in the upper left area of the screen
   Broodwar->drawTextScreen(200, 0, "FPS: %d", Broodwar->getFPS());
   Broodwar->drawTextScreen(200, 20, "Average FPS: %f", Broodwar->getAverageFPS());
+  Broodwar->drawTextScreen(200, 10, "Latency Frames : %d", Broodwar->getLatencyFrames());
 
   // Return if the game is a replay or is paused
   if (Broodwar->isReplay() || Broodwar->isPaused() || !Broodwar->self())
@@ -167,6 +171,9 @@ void ExampleAIModule::onFrame()
     rowPos += 20;
   }
 
+  // TESTING:  move back to end of onFrame()
+  mainManager->update();
+
   // Prevent spamming by only running our onFrame once every number of latency frames.
   // Latency frames are the number of frames before commands are processed.
   if (Broodwar->getFrameCount() % Broodwar->getLatencyFrames() != 0)
@@ -181,6 +188,33 @@ void ExampleAIModule::onFrame()
   else
   {
     mineralBuffer = 0;
+  }
+
+  // Pool Building Code; frame delay if it fails to build
+  // TESTING : remove the if true and make 2nd else if an if to undo
+  if (!hasPool && buildingPool == 0 && Broodwar->self()->minerals() >= UnitTypes::Zerg_Spawning_Pool.mineralPrice())
+  {
+    //mineralBuffer += UnitTypes::Zerg_Spawning_Pool.mineralPrice();
+    if (mainManager->numWorkers() > 0)
+    {
+      const Unit &u = mainManager->takeWorker();
+      TilePosition buildPosition = Broodwar->getBuildLocation(UnitTypes::Zerg_Spawning_Pool, u->getTilePosition());
+      u->build(UnitTypes::Zerg_Spawning_Pool, buildPosition);
+      buildingPool = 180;
+    }
+  }
+  else if (buildingHatch == 0 && Broodwar->self()->minerals() >= UnitTypes::Zerg_Hatchery.mineralPrice() + mineralBuffer)
+  {
+    //mineralBuffer += UnitTypes::Zerg_Hatchery.mineralPrice();
+    // getBuildLocation() might not find a suitable location for UnitTypes::Zerg_Hatchery
+    if (mainManager->numWorkers() > 0)
+    {
+      // TODO: often can't find a placement position for hatchery, trying the same invalid location over and over
+      const Unit &u = mainManager->takeWorker();
+      TilePosition buildPosition = Broodwar->getBuildLocation(UnitTypes::Zerg_Spawning_Pool, u->getTilePosition());
+      u->build(UnitTypes::Zerg_Hatchery, buildPosition);
+      buildingHatch = 240;
+    }
   }
 
   // Iterate through all the units that we own
@@ -256,33 +290,10 @@ void ExampleAIModule::onFrame()
     // If the unit is a worker unit
     else if (u->getType().isWorker())
     {
-      // Pool Building Code; frame delay if it fails to build
-      if (!hasPool && buildingPool == 0 && Broodwar->self()->minerals() >= UnitTypes::Zerg_Spawning_Pool.mineralPrice())
-      {
-        //mineralBuffer += UnitTypes::Zerg_Spawning_Pool.mineralPrice();
-        TilePosition buildPosition = Broodwar->getBuildLocation(UnitTypes::Zerg_Spawning_Pool, u->getTilePosition());
-        if (mainManager->containsWorker(u))
-        {
-          mainManager->removeWorker(u);
-        }
-        u->build(UnitTypes::Zerg_Spawning_Pool, buildPosition);
-        buildingPool = 180;
-      }
-      else if (buildingHatch == 0 && Broodwar->self()->minerals() >= UnitTypes::Zerg_Hatchery.mineralPrice() + mineralBuffer)
-      {
-        //mineralBuffer += UnitTypes::Zerg_Hatchery.mineralPrice();
-        // getBuildLocation() might not find a suitable location for UnitTypes::Zerg_Hatchery
-        TilePosition buildPosition = Broodwar->getBuildLocation(UnitTypes::Zerg_Spawning_Pool, u->getTilePosition());
-        if (mainManager->containsWorker(u))
-        {
-          mainManager->removeWorker(u);
-        }
-        u->build(UnitTypes::Zerg_Hatchery, buildPosition);
-        buildingHatch = 240;
-      }
 
-      // if our worker is idle
-      if (u->isIdle())
+
+      // if our worker is gathering or idle but doesn't belong to mainManager
+      if (!mainManager->containsWorker(u) && (u->isIdle() || u->isGatheringMinerals() || u->isGatheringGas()))
       {
         mainManager->addWorker(u);
         // Order workers carrying a resource to return them to the center,
@@ -311,11 +322,13 @@ void ExampleAIModule::onFrame()
       {
       u->train(UnitTypes::Zerg_Overlord);
       }
-      else*/ if (hasPool && Broodwar->self()->minerals() >= UnitTypes::Zerg_Zergling.mineralPrice() + mineralBuffer)
-      {
-        u->train(UnitTypes::Zerg_Zergling);
-      }
-      else if (droneCount < 24 && Broodwar->self()->minerals() >= UnitTypes::Zerg_Drone.mineralPrice() + mineralBuffer)
+      else*/ 
+      // TESTING make sure to add lings back in >.>
+      //if (hasPool && Broodwar->self()->minerals() >= UnitTypes::Zerg_Zergling.mineralPrice() + mineralBuffer)
+     // {
+      //  u->train(UnitTypes::Zerg_Zergling);
+      //}
+      /*else*/ if (droneCount < 18 && Broodwar->self()->minerals() >= UnitTypes::Zerg_Drone.mineralPrice() + mineralBuffer)
       {
         u->train(u->getType().getRace().getWorker());
       }
@@ -381,7 +394,7 @@ void ExampleAIModule::onFrame()
     } // closure: failed to train idle unit
     }
   } // closure: unit iterator
-  mainManager->update();
+  
 }
 
 void ExampleAIModule::onSendText(std::string text)
