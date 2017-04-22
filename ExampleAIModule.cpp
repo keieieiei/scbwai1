@@ -23,11 +23,13 @@ int mineralBuffer;
 // holds the row position to avoid overlap
 int rowPos;
 BaseManager *mainManager;
+// reserve drone for manual movement
+int reserve;
 
 void ExampleAIModule::onStart()
 {
   // get player id
-  CIA::Instance()._thisPlayer = Broodwar->self()->getID();
+  InfoManager::Instance().setPlayerID(Broodwar->self()->getID());
 
   // Hello World!
   // Broodwar->sendText("Hello world!");
@@ -160,12 +162,20 @@ void ExampleAIModule::onFrame()
   Broodwar->drawTextScreen(500, 60, "remainingMinerals(): %d", mainManager->remainingMinerals());
   Broodwar->drawTextScreen(500, 80, "remainingVespene(): %d", mainManager->remainingVespene());
 
-  // print types and counts
+  // Player Unit Debug
   rowPos = 20;
-  for (BWAPI::UnitType ut : CIA::Instance()._livingUnitTypes){
+  for (BWAPI::UnitType ut : InfoManager::Instance().getLivingUnitTypes()){
     Broodwar->drawTextScreen(350, rowPos, "%s: %d", ut.c_str(), Broodwar->self()->allUnitCount(ut));
     rowPos += 20;
   }
+
+  // Enemy Unit Debug
+  rowPos = 120;
+  for (BWAPI::UnitType ut : InfoManager::Instance().getEnemyUnitTypes()){
+    Broodwar->drawTextScreen(500, rowPos, "%s: %d", ut.c_str(), InfoManager::Instance().numEnemyType(ut));
+    rowPos += 20;
+  }
+  Broodwar->drawTextScreen(500, rowPos, "# Known Enemy Units: %d", InfoManager::Instance().getEnemyUnits().size());
 
   // Prevent spamming by only running our onFrame once every number of latency frames.
   // Latency frames are the number of frames before commands are processed.
@@ -202,6 +212,9 @@ void ExampleAIModule::onFrame()
     // Ignore the unit if it is incomplete or busy constructing
     //if ( !u->isCompleted() || u->isConstructing() )
     //  continue;
+
+    // reserve unit
+    if (reserve == 0) reserve = u->getID();
 
     // Finally make the unit do some stuff!
 
@@ -254,7 +267,7 @@ void ExampleAIModule::onFrame()
       }
     }
     // If the unit is a worker unit
-    else if (u->getType().isWorker())
+    else if (u->getType().isWorker() && reserve != u->getID())
     {
       // Pool Building Code; frame delay if it fails to build
       if (!hasPool && buildingPool == 0 && Broodwar->self()->minerals() >= UnitTypes::Zerg_Spawning_Pool.mineralPrice())
@@ -290,16 +303,16 @@ void ExampleAIModule::onFrame()
         /* base manager should handle this now
         if (u->isCarryingGas() || u->isCarryingMinerals())
         {
-          u->returnCargo();
+        u->returnCargo();
         }
         else if (!u->getPowerUp())  // The worker cannot harvest anything if it
         {                             // is carrying a powerup such as a flag
-          // Harvest from the nearest mineral patch or gas refinery
-          if (!u->gather(u->getClosestUnit(IsMineralField || IsRefinery)))
-          {
-            // If the call fails, then print the last error message
-            Broodwar << Broodwar->getLastError() << std::endl;
-          }
+        // Harvest from the nearest mineral patch or gas refinery
+        if (!u->gather(u->getClosestUnit(IsMineralField || IsRefinery)))
+        {
+        // If the call fails, then print the last error message
+        Broodwar << Broodwar->getLastError() << std::endl;
+        }
         } // closure: has no powerup */
       } // closure: if idle
     }
@@ -311,7 +324,8 @@ void ExampleAIModule::onFrame()
       {
       u->train(UnitTypes::Zerg_Overlord);
       }
-      else*/ if (hasPool && Broodwar->self()->minerals() >= UnitTypes::Zerg_Zergling.mineralPrice() + mineralBuffer)
+      else*/
+      if (hasPool && Broodwar->self()->minerals() >= UnitTypes::Zerg_Zergling.mineralPrice() + mineralBuffer)
       {
         u->train(UnitTypes::Zerg_Zergling);
       }
@@ -319,69 +333,72 @@ void ExampleAIModule::onFrame()
       {
         u->train(u->getType().getRace().getWorker());
       }
-    // Order the depot to construct more workers! But only when it is idle.
-    if (u->isIdle() && !u->isTraining())
-    {
-      // If that fails, draw the error at the location so that you can visibly see what went wrong!
-      // However, drawing the error once will only appear for a single frame
-      // so create an event that keeps it on the screen for some frames
-      Position pos = u->getPosition();
-      Error lastErr = Broodwar->getLastError();
-      Broodwar->registerEvent([pos, lastErr](Game*){ Broodwar->drawTextMap(pos, "%c%s", Text::White, lastErr.c_str()); },   // action
-        nullptr,    // condition
-        Broodwar->getLatencyFrames());  // frames to run
+      // Order the depot to construct more workers! But only when it is idle.
+      if (u->isIdle() && !u->isTraining())
+      {
+        // If that fails, draw the error at the location so that you can visibly see what went wrong!
+        // However, drawing the error once will only appear for a single frame
+        // so create an event that keeps it on the screen for some frames
+        Position pos = u->getPosition();
+        Error lastErr = Broodwar->getLastError();
+        Broodwar->registerEvent([pos, lastErr](Game*){ Broodwar->drawTextMap(pos, "%c%s", Text::White, lastErr.c_str()); },   // action
+          nullptr,    // condition
+          Broodwar->getLatencyFrames());  // frames to run
 
-      if (lastErr == Errors::Insufficient_Supply && buildingOverlord == 0)
-      {
-        u->train(UnitTypes::Zerg_Overlord);
-        buildingOverlord = 48;
-      }
-      /*
-      // Retrieve the supply provider type in the case that we have run out of supplies
-      UnitType supplyProviderType = u->getType().getRace().getSupplyProvider();
-      static int lastChecked = 0;
-      // If we are supply blocked and haven't tried constructing more recently
-      if (  lastErr == Errors::Insufficient_Supply &&
-      lastChecked + 400 < Broodwar->getFrameCount() &&
-      Broodwar->self()->incompleteUnitCount(supplyProviderType) == 0 )
-      {
-      lastChecked = Broodwar->getFrameCount();
-      // Retrieve a unit that is capable of constructing the supply needed
-      Unit supplyBuilder = u->getClosestUnit(  GetType == supplyProviderType.whatBuilds().first &&
-      (IsIdle || IsGatheringMinerals) &&
-      IsOwned);
-      // If a unit was found
-      if ( supplyBuilder )
-      {
-      if ( supplyProviderType.isBuilding() )
-      {
-      TilePosition targetBuildLocation = Broodwar->getBuildLocation(supplyProviderType, supplyBuilder->getTilePosition());
-      if ( targetBuildLocation )
-      {
-      // Register an event that draws the target build location
-      Broodwar->registerEvent([targetBuildLocation,supplyProviderType](Game*)
-      {
-      Broodwar->drawBoxMap( Position(targetBuildLocation),
-      Position(targetBuildLocation + supplyProviderType.tileSize()),
-      Colors::Blue);
-      },
-      nullptr,  // condition
-      supplyProviderType.buildTime() + 100 );  // frames to run
-      // Order the builder to construct the supply structure
-      supplyBuilder->build( supplyProviderType, targetBuildLocation );
-      }
-      }
-      else
-      {
-      // Train the supply provider (Overlord) if the provider is not a structure
-      supplyBuilder->train( supplyProviderType );
-      }
-      } // closure: supplyBuilder is valid
-      } // closure: insufficient supply */
-    } // closure: failed to train idle unit
+        if (lastErr == Errors::Insufficient_Supply && buildingOverlord == 0)
+        {
+          u->train(UnitTypes::Zerg_Overlord);
+          buildingOverlord = 48;
+        }
+        /*
+        // Retrieve the supply provider type in the case that we have run out of supplies
+        UnitType supplyProviderType = u->getType().getRace().getSupplyProvider();
+        static int lastChecked = 0;
+        // If we are supply blocked and haven't tried constructing more recently
+        if (  lastErr == Errors::Insufficient_Supply &&
+        lastChecked + 400 < Broodwar->getFrameCount() &&
+        Broodwar->self()->incompleteUnitCount(supplyProviderType) == 0 )
+        {
+        lastChecked = Broodwar->getFrameCount();
+        // Retrieve a unit that is capable of constructing the supply needed
+        Unit supplyBuilder = u->getClosestUnit(  GetType == supplyProviderType.whatBuilds().first &&
+        (IsIdle || IsGatheringMinerals) &&
+        IsOwned);
+        // If a unit was found
+        if ( supplyBuilder )
+        {
+        if ( supplyProviderType.isBuilding() )
+        {
+        TilePosition targetBuildLocation = Broodwar->getBuildLocation(supplyProviderType, supplyBuilder->getTilePosition());
+        if ( targetBuildLocation )
+        {
+        // Register an event that draws the target build location
+        Broodwar->registerEvent([targetBuildLocation,supplyProviderType](Game*)
+        {
+        Broodwar->drawBoxMap( Position(targetBuildLocation),
+        Position(targetBuildLocation + supplyProviderType.tileSize()),
+        Colors::Blue);
+        },
+        nullptr,  // condition
+        supplyProviderType.buildTime() + 100 );  // frames to run
+        // Order the builder to construct the supply structure
+        supplyBuilder->build( supplyProviderType, targetBuildLocation );
+        }
+        }
+        else
+        {
+        // Train the supply provider (Overlord) if the provider is not a structure
+        supplyBuilder->train( supplyProviderType );
+        }
+        } // closure: supplyBuilder is valid
+        } // closure: insufficient supply */
+      } // closure: failed to train idle unit
     }
   } // closure: unit iterator
   mainManager->update();
+
+  // clean up enemy list (should prolly move this later)
+  InfoManager::Instance().cleanUpEnemyTypes();
 }
 
 void ExampleAIModule::onSendText(std::string text)
@@ -395,7 +412,6 @@ void ExampleAIModule::onSendText(std::string text)
   //BWTA::analyze();
   //analyzed = true;
   //analysis_just_finished = true;
-
   //thread seemed to create problems
   //CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)AnalyzeThread, NULL, 0, NULL);
   }
@@ -443,6 +459,11 @@ void ExampleAIModule::onNukeDetect(BWAPI::Position target)
 
 void ExampleAIModule::onUnitDiscover(BWAPI::Unit unit)
 {
+  if (!InfoManager::Instance().ownedByPlayer(unit) && !unit->getPlayer()->isNeutral())
+  {
+    InfoManager::Instance().addEnemyUnit(unit);
+  }
+  Broodwar->sendText("%s has been discovered.", unit->getType().c_str());
 }
 
 void ExampleAIModule::onUnitEvade(BWAPI::Unit unit)
@@ -470,6 +491,10 @@ void ExampleAIModule::onUnitCreate(BWAPI::Unit unit)
       Broodwar->sendText("%.2d:%.2d: %s creates a %s", minutes, seconds, unit->getPlayer()->getName().c_str(), unit->getType().c_str());
     }
   }
+
+  if (InfoManager::Instance().ownedByPlayer(unit)) {
+    Broodwar->sendText("%s has been created.", unit->getType().c_str());
+  }
 }
 
 void ExampleAIModule::onUnitDestroy(BWAPI::Unit unit)
@@ -483,20 +508,27 @@ void ExampleAIModule::onUnitDestroy(BWAPI::Unit unit)
     --droneCount;
   }
 
-  if (unit->getPlayer()->getID() == CIA::Instance()._thisPlayer)
+  // print death report
+  if (InfoManager::Instance().ownedByPlayer(unit))
   {
-    Broodwar->sendText("FAREWELL bb %s", unit->getType().c_str());
-  } 
+    Broodwar->sendText("Player %s has perished.", unit->getType().c_str());
+  }
   else
   {
-    Broodwar->sendText("RIP enemy %s", unit->getType().c_str());
+    Broodwar->sendText("Enemy %s has perished.", unit->getType().c_str());
   }
-  
 
   // remove unit type from living unit list if population hits 0
-  if (unit->getPlayer()->getID() == CIA::Instance()._thisPlayer && Broodwar->self()->allUnitCount(unit->getType()) == 0)
+  if (InfoManager::Instance().ownedByPlayer(unit))
   {
-    CIA::Instance().removeLivingUnitType(unit->getType());
+    if (Broodwar->self()->allUnitCount(unit->getType()) == 0)
+    {
+      InfoManager::Instance().removeLivingUnitType(unit->getType());
+    }
+  }
+  else
+  {
+    InfoManager::Instance().removeEnemyUnit(unit);
   }
 }
 
@@ -518,23 +550,14 @@ void ExampleAIModule::onUnitMorph(BWAPI::Unit unit)
     ++morphCount;
   }
   // print all morph args
-  Broodwar->sendText("a fuckin %s morphed", unit->getType().c_str());
+  Broodwar->sendText("A %s has completed its morph.", unit->getType().c_str());
 
-  // first check for owner
-  if (unit->getPlayer()->getID() == CIA::Instance()._thisPlayer)
+  // update unit type list
+  if (InfoManager::Instance().ownedByPlayer(unit))
   {
-    // every +1 egg == -1 larva; remove larva from living unit list if it hits 0
-    if (unit->getType() == UnitTypes::Zerg_Egg && Broodwar->self()->allUnitCount(UnitTypes::Zerg_Larva) == 0)
-    {
-      CIA::Instance().removeLivingUnitType(UnitTypes::Zerg_Larva);
-    }
-    //SHOULD PROLLY FIX - morphing can happen from non-eggs
-    else if (Broodwar->self()->allUnitCount(UnitTypes::Zerg_Egg) == 0)
-    {
-      CIA::Instance().removeLivingUnitType(UnitTypes::Zerg_Egg);
-    }
-    // add the newly born fucker
-    CIA::Instance().addLivingUnitType(unit->getType());
+    // we don't know what the unit morphed *from* so, just clean up the list.
+    InfoManager::Instance().cleanUpUnitTypeList();
+    InfoManager::Instance().addLivingUnitType(unit->getType());
   }
 }
 
@@ -569,10 +592,7 @@ void ExampleAIModule::onUnitComplete(BWAPI::Unit unit)
     ++droneCount;
 
   // add unit type to list if we own it
-  if (unit->getPlayer()->getID() == CIA::Instance()._thisPlayer)
-  {
-    CIA::Instance().addLivingUnitType(unit->getType());
-  }
+  if (InfoManager::Instance().ownedByPlayer(unit)) InfoManager::Instance().addLivingUnitType(unit->getType());
 }
 
 // BWTA functions for map analysis

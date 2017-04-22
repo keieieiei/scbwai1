@@ -2,7 +2,7 @@
 #include <BWAPI.h>
 #include <BWTA.h>
 #include <Windows.h>
-#include "CIA.h"
+#include "InfoManager.h"
 #include "BaseManager.h"
 
 DWORD WINAPI AnalyzeThread();
