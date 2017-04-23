@@ -178,7 +178,7 @@ void ExampleAIModule::onFrame()
 
   // Player Unit Debug
   rowPos = 20;
-  for (BWAPI::UnitType ut : InfoManager::Instance().getLivingUnitTypes()){
+  for (BWAPI::UnitType ut : InfoManager::Instance().getPlayerUnitTypes()){
     Broodwar->drawTextScreen(350, rowPos, "%s: %d", ut.c_str(), Broodwar->self()->allUnitCount(ut));
     rowPos += 20;
   }
@@ -186,7 +186,7 @@ void ExampleAIModule::onFrame()
   // Enemy Unit Debug
   rowPos = 120;
   for (BWAPI::UnitType ut : InfoManager::Instance().getEnemyUnitTypes()){
-    Broodwar->drawTextScreen(500, rowPos, "%s: %d", ut.c_str(), InfoManager::Instance().numEnemyType(ut));
+    Broodwar->drawTextScreen(500, rowPos, "%s: %d", ut.c_str(), InfoManager::Instance().numUnitType(ut, InfoManager::Instance().getEnemyUnitsInfo()));
     rowPos += 20;
   }
   Broodwar->drawTextScreen(500, rowPos, "# Known Enemy Units: %d", InfoManager::Instance().getEnemyUnitsInfo().size());
@@ -421,7 +421,7 @@ void ExampleAIModule::onFrame()
   } // closure: unit iterator
 
   // clean up enemy list (should prolly move this later)
-  InfoManager::Instance().cleanUpEnemyTypes();
+  //InfoManager::Instance().cleanUpEnemyTypes();
 }
 
 void ExampleAIModule::onSendText(std::string text)
@@ -451,7 +451,11 @@ void ExampleAIModule::onSendText(std::string text)
 
   //debug trigger
   if (text == "print enemy") {
-    InfoManager::Instance().debugEnemy();
+    InfoManager::Instance().debug("enemy");
+  } 
+  else if (text == "print player")
+  {
+    InfoManager::Instance().debug("player");
   }
 }
 
@@ -487,12 +491,13 @@ void ExampleAIModule::onNukeDetect(BWAPI::Position target)
 
 void ExampleAIModule::onUnitDiscover(BWAPI::Unit unit)
 {
+  // notes: triggers after units are created, but not when morphed
+  // printf("%s has been discovered.\n", unit->getType().c_str());
+
   if (!InfoManager::Instance().ownedByPlayer(unit) && !unit->getPlayer()->isNeutral())
   {
-    InfoManager::Instance().addEnemyUnit(unit);
+    InfoManager::Instance().addUnitInfo(unit);
   }
-  // notes: triggers after units are created, but not when morphed
-  //printf("%s has been discovered.\n", unit->getType().c_str());
 }
 
 void ExampleAIModule::onUnitEvade(BWAPI::Unit unit)
@@ -509,6 +514,8 @@ void ExampleAIModule::onUnitHide(BWAPI::Unit unit)
 
 void ExampleAIModule::onUnitCreate(BWAPI::Unit unit)
 {
+  // triggers when something is created, but not when morphed
+
   if (Broodwar->isReplay())
   {
     // if we are in a replay, then we will print out the build order of the structures
@@ -521,9 +528,8 @@ void ExampleAIModule::onUnitCreate(BWAPI::Unit unit)
     }
   }
 
-  if (InfoManager::Instance().ownedByPlayer(unit)) {
-    printf("%s has been created.\n", unit->getType().c_str());
-  }
+  // update unit info
+  if (!unit->getPlayer()->isNeutral()) InfoManager::Instance().addUnitInfo(unit);
 }
 
 void ExampleAIModule::onUnitDestroy(BWAPI::Unit unit)
@@ -547,18 +553,8 @@ void ExampleAIModule::onUnitDestroy(BWAPI::Unit unit)
     Broodwar->sendText("Enemy %s has perished.", unit->getType().c_str());
   }
 
-  // remove unit type from living unit list if population hits 0
-  if (InfoManager::Instance().ownedByPlayer(unit))
-  {
-    if (Broodwar->self()->allUnitCount(unit->getType()) == 0)
-    {
-      InfoManager::Instance().removeLivingUnitType(unit->getType());
-    }
-  }
-  else
-  {
-    InfoManager::Instance().removeEnemyUnit(unit);
-  }
+  // remove unit type from  unit list if population hits 0
+  InfoManager::Instance().removeUnitInfo(unit);
 
   // reset reserve if it's killed
   if (unit->getID() == reserve) 
@@ -584,16 +580,12 @@ void ExampleAIModule::onUnitMorph(BWAPI::Unit unit)
   {
     ++morphCount;
   }
-  // print all morph args
-  Broodwar->sendText("A %s has completed its morph.", unit->getType().c_str());
 
-  // update unit type list
-  if (InfoManager::Instance().ownedByPlayer(unit))
-  {
-    // we don't know what the unit morphed *from* so, just clean up the list.
-    InfoManager::Instance().cleanUpUnitTypeList();
-    InfoManager::Instance().addLivingUnitType(unit->getType());
-  }
+  // print all morph args
+  Broodwar->sendText("A %s has completed its morph.\n", unit->getType().c_str());
+  
+  // update unit info
+  InfoManager::Instance().addUnitInfo(unit);
 }
 
 void ExampleAIModule::onUnitRenegade(BWAPI::Unit unit)
@@ -626,8 +618,8 @@ void ExampleAIModule::onUnitComplete(BWAPI::Unit unit)
   if (unit->getType() == UnitTypes::Zerg_Drone)
     ++droneCount;
 
-  // add unit type to list if we own it
-  if (InfoManager::Instance().ownedByPlayer(unit)) InfoManager::Instance().addLivingUnitType(unit->getType());
+  // update unit info
+  if (!unit->getPlayer()->isNeutral()) InfoManager::Instance().addUnitInfo(unit);
 }
 
 // BWTA functions for map analysis
