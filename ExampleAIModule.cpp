@@ -23,6 +23,8 @@ int mineralBuffer;
 // holds the row position to avoid overlap
 int rowPos;
 BaseManager *mainManager;
+// reserve a unit
+int reserve;
 
 void ExampleAIModule::onStart()
 {
@@ -255,6 +257,12 @@ void ExampleAIModule::onFrame()
     //if ( !u->isCompleted() || u->isConstructing() )
     //  continue;
 
+    // reserve a unit
+    if (reserve == 0 && u->getType().isWorker())
+    {
+      reserve = u->getID();
+    }
+
     // Finally make the unit do some stuff!
 
     if (u->isConstructing())
@@ -305,10 +313,9 @@ void ExampleAIModule::onFrame()
         }
       }
     }
-    // If the unit is a worker unit
-    else if (u->getType().isWorker())
+    // If the unit is a worker unit **but not the reserve!
+    else if (u->getType().isWorker() && u->getID() != reserve)
     {
-
 
       // if our worker is gathering or idle but doesn't belong to mainManager
       if (!mainManager->containsWorker(u) && (u->isIdle() || u->isGatheringMinerals() || u->isGatheringGas()))
@@ -551,6 +558,12 @@ void ExampleAIModule::onUnitDestroy(BWAPI::Unit unit)
   else
   {
     InfoManager::Instance().removeEnemyUnit(unit);
+  }
+
+  // reset reserve if it's killed
+  if (unit->getID() == reserve) 
+  {
+    reserve = 0;
   }
 }
 

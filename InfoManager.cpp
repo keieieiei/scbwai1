@@ -73,8 +73,8 @@ void InfoManager::addEnemyUnit(BWAPI::Unit u)
 {
   printf("Received request to add enemy %s id %d\n", u->getType().c_str(), u->getID());
   // insert can't tell if it's a dup for morphed things?, so check via ID.
-  bool has = false;
-  for (auto &ux : enemyUnitsInfo) {
+  //bool has = false;
+  /*for (auto &ux : enemyUnitsInfo) {
     if (ux.getID() == u->getID()){
       has = true;
       // update the type if necessary (morphs, etc)
@@ -83,13 +83,29 @@ void InfoManager::addEnemyUnit(BWAPI::Unit u)
       }
       break;
     }
-  }
+  }*/
 
-  if (!has){
+  auto ui = std::find(enemyUnitsInfo.begin(), enemyUnitsInfo.end(), u);
+  if (ui == enemyUnitsInfo.end())
+  {
     UnitInfo newU(u->getID(), u->getType());
     enemyUnitsInfo.push_back(newU);
     printf("Added enemy unit %s id %d\n", u->getType().c_str(), u->getID());
+  } 
+  else
+  {
+    // update the type if necessary (morphs, etc)
+    if ((*ui).getType() != u->getType()) {
+      printf("Updated enemy unit from %s to %s id %d\n", (*ui).getType().c_str(), u->getType().c_str(), u->getID());
+      (*ui).setType(u->getType());
+    }
   }
+
+  /*if (!has){
+    UnitInfo newU(u->getID(), u->getType());
+    enemyUnitsInfo.push_back(newU);
+    printf("Added enemy unit %s id %d\n", u->getType().c_str(), u->getID());
+  }*/
   addLivingUnitType(u->getType(), enemyUnitTypes);
 }
 
