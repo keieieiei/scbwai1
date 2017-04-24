@@ -2,6 +2,8 @@
 #include <BWAPI.h>
 #include <BWTA.h>
 #include <Windows.h>
+#include <time.h>
+#include <stdlib.h>
 #include "InfoManager.h"
 #include "BaseManager.h"
 #include "UnitInfo.h"

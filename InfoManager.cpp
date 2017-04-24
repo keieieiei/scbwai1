@@ -3,8 +3,7 @@
 InfoManager::InfoManager()
 {
   thisPlayerID = 0;
-  playerUnitTypes = {};
-  playerUnitsInfo = {};
+  livingUnitTypes = { };
   enemyUnitsInfo = {};
 }
 
@@ -28,26 +27,36 @@ bool InfoManager::ownedByPlayer(BWAPI::Unit u)
   return u->getPlayer()->getID() == thisPlayerID;
 }
 
-std::vector<BWAPI::UnitType> InfoManager::getPlayerUnitTypes()
+std::vector<BWAPI::UnitType> InfoManager::getLivingUnitTypes()
 {
-  return playerUnitTypes;
+  return livingUnitTypes;
 }
 
-bool InfoManager::hasUnitType(BWAPI::UnitType ut, std::vector<BWAPI::UnitType> &v)
+bool InfoManager::hasLivingUnitType(BWAPI::UnitType ut, std::vector<BWAPI::UnitType> &l)
 {
-  auto ui = std::find(v.begin(), v.end(), ut);
-  return ui != v.end();
+  auto ui = std::find(l.begin(), l.end(), ut);
+  return ui != l.end();
 }
 
-void InfoManager::addUnitType(BWAPI::UnitType ut, std::vector<BWAPI::UnitType> &v)
+void InfoManager::addLivingUnitType(BWAPI::UnitType ut, std::vector<BWAPI::UnitType> &l)
 {
-  if (!hasUnitType(ut, v)) v.push_back(ut);
+  if (!hasLivingUnitType(ut, l)) l.push_back(ut);
 }
 
-void InfoManager::removeUnitType(BWAPI::UnitType ut, std::vector<BWAPI::UnitType> &v)
+void InfoManager::removeLivingUnitType(BWAPI::UnitType ut, std::vector<BWAPI::UnitType> &l)
 {
-  auto ui = std::find(v.begin(), v.end(), ut);
-  if (ui != v.end()) v.erase(ui);
+  auto ui = std::find(l.begin(), l.end(), ut);
+  if (ui != l.end()) l.erase(ui);
+}
+
+// currently only cleans up the player list
+void InfoManager::cleanUpUnitTypeList(std::vector<BWAPI::UnitType> &l){
+  for (auto ut : l){
+    if (BWAPI::Broodwar->self()->allUnitCount(ut) == 0)
+    {
+      removeLivingUnitType(ut, l);
+    }
+  }
 }
 
 std::vector<BWAPI::UnitType> InfoManager::getEnemyUnitTypes()
@@ -60,106 +69,79 @@ std::vector<UnitInfo> InfoManager::getEnemyUnitsInfo()
   return enemyUnitsInfo;
 }
 
-void InfoManager::addUnitInfo(BWAPI::Unit u)
+void InfoManager::addEnemyUnit(BWAPI::Unit u)
 {
-  setCurrentVar(u);
+  printf("Received request to add enemy %s id %d\n", u->getType().c_str(), u->getID());
+  // insert can't tell if it's a dup for morphed things?, so check via ID.
+  //bool has = false;
+  /*for (auto &ux : enemyUnitsInfo) {
+    if (ux.getID() == u->getID()){
+      has = true;
+      // update the type if necessary (morphs, etc)
+      if (ux.getType() != u->getType()) {
+        ux.setType(u->getType());
+      }
+      break;
+    }
+  }*/
 
-  //printf("Received request to add %s %d to %s units\n", u->getType().c_str(), u->getID(), p);
-
-  auto ui = std::find(currUnits->begin(), currUnits->end(), u);
-
-  if (ui == currUnits->end())
+  auto ui = std::find(enemyUnitsInfo.begin(), enemyUnitsInfo.end(), u);
+  if (ui == enemyUnitsInfo.end())
   {
-    // unit does not exist in the list; create UnitInfo and add
-    UnitInfo newU(u);
-    currUnits->push_back(newU);
-    printf("Added %s unit %s id %d\n", currPlayer, u->getType().c_str(), u->getID());
-  }
+    UnitInfo newU(u->getID(), u->getType());
+    enemyUnitsInfo.push_back(newU);
+    printf("Added enemy unit %s id %d\n", u->getType().c_str(), u->getID());
+  } 
   else
   {
-    // TODO: maybe? if something morphs while it is still visible, discover is not triggered so this won't happen for 
-    //       enemies atm
-    // unit already exists; update the type if necessary (morphs, etc)
+    // update the type if necessary (morphs, etc)
     if ((*ui).getType() != u->getType()) {
-      BWAPI::UnitType prevType = ui->getType();
-
-      printf("Updated %s unit from %s to %s id %d\n", currPlayer, prevType.c_str(), u->getType().c_str(), u->getID());
-
+      printf("Updated enemy unit from %s to %s id %d\n", (*ui).getType().c_str(), u->getType().c_str(), u->getID());
       (*ui).setType(u->getType());
-      if (numUnitType(prevType, *currUnits) == 0)
-      {
-        removeUnitType(prevType, *currTypes);
-      }
     }
   }
 
-  // update unit type list
-  addUnitType(u->getType(), *currTypes);
+  /*if (!has){
+    UnitInfo newU(u->getID(), u->getType());
+    enemyUnitsInfo.push_back(newU);
+    printf("Added enemy unit %s id %d\n", u->getType().c_str(), u->getID());
+  }*/
+  addLivingUnitType(u->getType(), enemyUnitTypes);
 }
 
-void InfoManager::removeUnitInfo(BWAPI::Unit u)
+void InfoManager::removeEnemyUnit(BWAPI::Unit u)
 {
-  setCurrentVar(u);
+  auto ui = std::find(enemyUnitsInfo.begin(), enemyUnitsInfo.end(), u);
+  if (ui != enemyUnitsInfo.end()) enemyUnitsInfo.erase(ui);
 
-  // remove unit
-  auto ui = std::find(currUnits->begin(), currUnits->end(), u);
-  if (ui != currUnits->end()) currUnits->erase(ui);
-  printf("Removed %s unit %s id %d\n", currPlayer, u->getType().c_str(), u->getID());
-
-  // update unit type list
-  if (numUnitType(u->getType(), *currUnits) == 0)
-  {
-    removeUnitType(u->getType(), *currTypes);
-  }
+  removeLivingUnitType(u->getType(), enemyUnitTypes);
 }
 
-bool InfoManager::hasUnitInfo(BWAPI::Unit u)
-{
-  std::vector<UnitInfo> v = ownedByPlayer(u) ? playerUnitsInfo : enemyUnitsInfo;
-  auto ui = std::find(v.begin(), v.end(), u);
-  return ui != v.end();
-}
-
-int InfoManager::numUnitType(BWAPI::UnitType ut, std::vector<UnitInfo> v)
+int InfoManager::numEnemyType(BWAPI::UnitType ut)
 {
   int num = 0;
-  for (auto u : v)
+  for (auto u : enemyUnitsInfo)
   {
     if (u.getType() == ut) num++;
   }
   return num;
 }
+void InfoManager::cleanUpEnemyTypes()
+{
+  for (auto ut : enemyUnitTypes){
+    if (numEnemyType(ut) == 0)
+    {
+      removeLivingUnitType(ut, enemyUnitTypes);
+    }
+  }
+}
 
-void InfoManager::debug(const char* s){
-  setCurrentVar(s);
-
-  printf("%s units logged:\n", s);
-  for (auto &u : *currUnits) {
+void InfoManager::debugEnemy()
+{
+  printf("last known enemy units: %d\n", enemyUnitsInfo.size());
+  printf("# of types: %d\n", enemyUnitTypes.size());
+  for (auto &u : enemyUnitsInfo) {
     printf("%s %d\n", u.getType().c_str(), u.getID());
   }
-  printf("\n\n# of each %s type:\n", s);
-  for (auto ut : *currTypes) {
-    printf("%s: %d\n", ut.c_str(), numUnitType(ut, *currUnits));
-  }
-  printf("\n\n# of %s types: %d\n", s, currTypes->size());
-  printf("last known %s units: %d\n", s, currUnits->size());
-}
 
-void InfoManager::setCurrentVar(BWAPI::Unit u)
-{
-  if (ownedByPlayer(u))
-  {
-    setCurrentVar("player");
-  }
-  else
-  {
-    setCurrentVar("enemy");
-  }
-}
-
-void InfoManager::setCurrentVar(const char* s)
-{
-  currPlayer = s;
-  currUnits = (s == "player") ? &playerUnitsInfo : &enemyUnitsInfo;
-  currTypes = (s == "player") ? &playerUnitTypes : &enemyUnitTypes;
 }
