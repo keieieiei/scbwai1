@@ -64,7 +64,7 @@ void InfoManager::addUnitInfo(BWAPI::Unit u)
 {
   setCurrentVar(u);
 
-  //printf("Received request to add %s %d to %s units\n", u->getType().c_str(), u->getID(), p);
+  if (debug) printf("Received request to add %s %d to %s units\n", u->getType().c_str(), u->getID(), currPlayer);
 
   auto ui = std::find(currUnits->begin(), currUnits->end(), u);
 
@@ -73,17 +73,18 @@ void InfoManager::addUnitInfo(BWAPI::Unit u)
     // unit does not exist in the list; create UnitInfo and add
     UnitInfo newU(u);
     currUnits->push_back(newU);
-    printf("Added %s unit %s id %d\n", currPlayer, u->getType().c_str(), u->getID());
+    if (debug) printf("Added %s unit %s id %d\n", currPlayer, u->getType().c_str(), u->getID());
   }
   else
   {
     // TODO: maybe? if something morphs while it is still visible, discover is not triggered so this won't happen for 
     //       enemies atm
+    // TODO: check if currUnits->unit->type is the same type as currUnits->type
     // unit already exists; update the type if necessary (morphs, etc)
     if ((*ui).getType() != u->getType()) {
       BWAPI::UnitType prevType = ui->getType();
 
-      printf("Updated %s unit from %s to %s id %d\n", currPlayer, prevType.c_str(), u->getType().c_str(), u->getID());
+      if (debug) printf("Updated %s unit from %s to %s id %d\n", currPlayer, prevType.c_str(), u->getType().c_str(), u->getID());
 
       (*ui).setType(u->getType());
       if (numUnitType(prevType, *currUnits) == 0)
@@ -101,10 +102,12 @@ void InfoManager::removeUnitInfo(BWAPI::Unit u)
 {
   setCurrentVar(u);
 
+  if (debug) printf("Received request to remove %s %d from %s units\n", u->getType().c_str(), u->getID(), currPlayer);
+
   // remove unit
   auto ui = std::find(currUnits->begin(), currUnits->end(), u);
   if (ui != currUnits->end()) currUnits->erase(ui);
-  printf("Removed %s unit %s id %d\n", currPlayer, u->getType().c_str(), u->getID());
+  if (debug) printf("Removed %s unit %s id %d\n", currPlayer, u->getType().c_str(), u->getID());
 
   // update unit type list
   if (numUnitType(u->getType(), *currUnits) == 0)
@@ -130,7 +133,7 @@ int InfoManager::numUnitType(BWAPI::UnitType ut, std::vector<UnitInfo> v)
   return num;
 }
 
-void InfoManager::debug(const char* s){
+void InfoManager::debugUnits(const char* s){
   setCurrentVar(s);
 
   printf("%s units logged:\n", s);
@@ -143,6 +146,11 @@ void InfoManager::debug(const char* s){
   }
   printf("\n\n# of %s types: %d\n", s, currTypes->size());
   printf("last known %s units: %d\n", s, currUnits->size());
+}
+
+void InfoManager::setDebug(bool b)
+{
+  debug = b;
 }
 
 void InfoManager::setCurrentVar(BWAPI::Unit u)

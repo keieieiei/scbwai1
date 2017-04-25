@@ -1,39 +1,50 @@
 #pragma once
 #include <BWAPI.h>
-#include <BWTA.h>
-#include <queue>
-#include <vector>
-
-#include "Mineral.h"
-#include "Drone.h"
+#include <memory>
 
 class BaseManager
 {
 private:
-  std::vector<Mineral*> minerals; // TODO:  don't want this to be a pointer
-  std::vector<Drone> drones;
-  BWAPI::Unit vespene; // Potential Issue: case of more than one geyser in base?
+  static const int gatherFrames;
+  static const int moveDistanceMax;
+  static const std::unordered_map<int, int> moveToMineralFrames;
+  static const int returnDistanceMin;
+  static const int returnDistanceMax;
+  static const std::unordered_map<int, int> returnToMainFrames;
+
+  struct Mineral
+  {
+    BWAPI::Unit unit;
+    int numWorkers;
+    int initialGatherFrame;
+  };
+
+  struct Worker
+  {
+    enum WorkerState
+    {
+      DEFAULT,
+      MOVING_TO_GATHER,
+      AT_GATHER_POINT,
+      RETURNING_RESOURCE,
+    };
+
+    BWAPI::Unit unit;
+    std::weak_ptr<Mineral> resource;
+    WorkerState state;
+  };
+
   BWAPI::Unit main;
-  BWTA::BaseLocation *location;
-  std::vector<BWAPI::Unit> sortedMinerals;
-  std::vector<BWAPI::Unit> freeMinerals;
-  std::vector<BWAPI::Unit> mineralsQueue;
-
-  // debugging
-  std::vector<int> isGatherFrameCount;
-
-  void detectResources();
+  std::vector<Worker> workers;
+  std::vector<std::shared_ptr<Mineral>> minerals;
 
 public:
-  BaseManager(const BWAPI::Unit &m, BWTA::BaseLocation *&l); // TODO:  figure out why BaseLocation can't be const
+  BaseManager(const BWAPI::Unit unit);
   ~BaseManager();
 
   void update();
-  void addWorker(const BWAPI::Unit &u);
-  BWAPI::Unit takeWorker();
-  bool containsWorker(const Drone &d);
-  bool hasMain();
   int  numWorkers();
-  int  remainingMinerals();
-  int  remainingVespene();
+  bool containsWorker(BWAPI::Unit unit);
+  void addWorker(BWAPI::Unit unit);
+  BWAPI::Unit takeWorker();
 };

@@ -20,6 +20,8 @@ private:
   void setCurrentVar(const char* s);
   void setCurrentVar(BWAPI::Unit u);
 
+  bool debug = false;
+
 public:
   InfoManager();
   ~InfoManager();
@@ -43,7 +45,8 @@ public:
   std::vector<BWAPI::UnitType> getEnemyUnitTypes();
   std::vector<UnitInfo> getEnemyUnitsInfo();
 
-  void debug(const char* s);
+  void debugUnits(const char* s);
+  void setDebug(bool b);
 
   static InfoManager & Instance(){
     static InfoManager instance;

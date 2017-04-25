@@ -4,10 +4,6 @@
 using namespace BWAPI;
 using namespace Filter;
 
-// BWTA2 Analysis Trackers
-// bool analyzed;
-// bool analysis_just_finished;
-
 // temporary SpawningPool flag
 int buildingPool;
 int buildingHatch;
@@ -22,9 +18,9 @@ int morphCount;
 int mineralBuffer;
 // holds the row position to avoid overlap
 int rowPos;
-BaseManager *mainManager;
-// reserve a unit
-int reserve;
+std::unique_ptr<BaseManager> mainManager;
+// reserve a unit - set to some unlikely non-ID value to turn off
+int reserve = 9000;
 
 void ExampleAIModule::onStart()
 {
@@ -71,14 +67,9 @@ void ExampleAIModule::onStart()
       Broodwar << "The matchup is " << Broodwar->self()->getRace() << " vs " << Broodwar->enemy()->getRace() << std::endl;
   }
 
-  // Read map information into BWTA
+  // Read & analyze map information with BWTA
   BWTA::readMap();
-  // analyzed = false;
-  // analysis_just_finished = false;
-
   BWTA::analyze();
-  // analyzed = true;
-  // analysis_just_finished = true;
 
   // temporary
   hasPool = false;
@@ -90,8 +81,7 @@ void ExampleAIModule::onStart()
   zerglingCount = 0;
   morphCount = 0;
   mineralBuffer = 0;
-  BWTA::BaseLocation *l = BWTA::getStartLocation(Broodwar->self());
-  BWAPI::Unit m;
+  BWAPI::Unit m = nullptr; // was causing build issues without initialization
   for (auto &u : Broodwar->self()->getUnits())
   {
     if (u->getType().isResourceDepot())
@@ -99,14 +89,18 @@ void ExampleAIModule::onStart()
       m = u;
     }
   }
-  mainManager = new BaseManager(m, l);
+  // causing build issues for some reason w/o if != nullptr
+  if (m != nullptr) mainManager = std::make_unique<BaseManager>(BaseManager(m));
 
+  // open a console for printing debug msgs
   FILE *df;
   AllocConsole();
   freopen_s(&df, "conin$", "r", stdin);
   freopen_s(&df, "conout$", "w", stdout);
   freopen_s(&df, "conout$", "w", stderr);
   printf("Debugging Window:\n");
+
+  srand(time(NULL));
 }
 
 void ExampleAIModule::onEnd(bool isWinner)
@@ -116,9 +110,6 @@ void ExampleAIModule::onEnd(bool isWinner)
   {
     // Log your win here!
   }
-
-  delete mainManager;
-  mainManager = nullptr;
 
   printf("end");
   FreeConsole();
@@ -130,7 +121,7 @@ void ExampleAIModule::onFrame()
 
   // Display the game frame rate as text in the upper left area of the screen
   Broodwar->drawTextScreen(200, 0, "FPS: %d", Broodwar->getFPS());
-  Broodwar->drawTextScreen(200, 20, "Average FPS: %f", Broodwar->getAverageFPS()); 
+  Broodwar->drawTextScreen(200, 20, "Average FPS: %f", Broodwar->getAverageFPS());
   Broodwar->drawTextScreen(200, 10, "Latency Frames : %d", Broodwar->getLatencyFrames());
 
   // Return if the game is a replay or is paused
@@ -139,13 +130,6 @@ void ExampleAIModule::onFrame()
 
   // BWTA draw
   drawTerrainData();
-  /*if (analyzed)
-  drawTerrainData();
-  if (analysis_just_finished)
-  {
-  Broodwar << "Finished analyzing map." << std::endl;
-  analysis_just_finished = false;
-  }*/
 
   // update hatch/pool building times if they are building
   if (buildingHatch > 0)
@@ -170,11 +154,13 @@ void ExampleAIModule::onFrame()
   Broodwar->drawTextScreen(50, 0, "mineralBuffer: %d", mineralBuffer);
   Broodwar->drawTextScreen(50, 20, "Supply: %d/%d", Broodwar->self()->supplyUsed(), Broodwar->self()->supplyTotal());
 
+  /*
   // Basemanager Debug
   Broodwar->drawTextScreen(500, 20, "hasMain(): %d", mainManager->hasMain());
   Broodwar->drawTextScreen(500, 40, "numWorkers(): %d", mainManager->numWorkers());
   Broodwar->drawTextScreen(500, 60, "remainingMinerals(): %d", mainManager->remainingMinerals());
   Broodwar->drawTextScreen(500, 80, "remainingVespene(): %d", mainManager->remainingVespene());
+  */
 
   // Player Unit Debug
   rowPos = 20;
@@ -199,7 +185,7 @@ void ExampleAIModule::onFrame()
   if (Broodwar->getFrameCount() % Broodwar->getLatencyFrames() != 0)
     return;
 
-  // hack way of stopping anything else from being produced
+  // hack way of stopping anything else from being produced until we get a 9 pool
   // supply is 2x actual supply; we're going for 9pool
   if (Broodwar->self()->supplyUsed() >= 18 && !hasPool && buildingPool < 200)
   {
@@ -209,7 +195,6 @@ void ExampleAIModule::onFrame()
   {
     mineralBuffer = 0;
   }
-
   // Pool Building Code; frame delay if it fails to build
   // TESTING : remove the if true and make 2nd else if an if to undo
   if (!hasPool && buildingPool == 0 && Broodwar->self()->minerals() >= UnitTypes::Zerg_Spawning_Pool.mineralPrice())
@@ -257,14 +242,13 @@ void ExampleAIModule::onFrame()
     //if ( !u->isCompleted() || u->isConstructing() )
     //  continue;
 
-    // reserve a unit
+    // TESTING: reserve a unit
     if (reserve == 0 && u->getType().isWorker())
     {
       reserve = u->getID();
     }
 
     // Finally make the unit do some stuff!
-
     if (u->isConstructing())
     {
       if (u->getBuildType() == UnitTypes::Zerg_Hatchery)
@@ -316,44 +300,21 @@ void ExampleAIModule::onFrame()
     // If the unit is a worker unit **but not the reserve!
     else if (u->getType().isWorker() && u->getID() != reserve)
     {
-
       // if our worker is gathering or idle but doesn't belong to mainManager
       if (!mainManager->containsWorker(u) && (u->isIdle() || u->isGatheringMinerals() || u->isGatheringGas()))
       {
         mainManager->addWorker(u);
-        // Order workers carrying a resource to return them to the center,
-        // otherwise find a mineral patch to harvest.
-        /* base manager should handle this now
-        if (u->isCarryingGas() || u->isCarryingMinerals())
-        {
-        u->returnCargo();
-        }
-        else if (!u->getPowerUp())  // The worker cannot harvest anything if it
-        {                             // is carrying a powerup such as a flag
-        // Harvest from the nearest mineral patch or gas refinery
-        if (!u->gather(u->getClosestUnit(IsMineralField || IsRefinery)))
-        {
-        // If the call fails, then print the last error message
-        Broodwar << Broodwar->getLastError() << std::endl;
-        }
-        } // closure: has no powerup */
-      } // closure: if idle
+      }
     }
     else if (u->getType().isResourceDepot()) // A resource depot is a Command Center, Nexus, or Hatchery
     {
-      /*if (Broodwar->self()->supplyUsed() - Broodwar->self()->supplyTotal() <= 2 &&
-      Broodwar->self()->minerals() >= UnitTypes::Zerg_Overlord.mineralPrice() + mineralBuffer &&
-      Broodwar->self()->incompleteUnitCount(UnitTypes::Zerg_Overlord) == 0)
+      // Train Zerglings if we have a Spawning Pool with a 70% chance 
+      if (hasPool && Broodwar->self()->minerals() >= UnitTypes::Zerg_Zergling.mineralPrice() + mineralBuffer && rand() % 10 > 2)
       {
-      u->train(UnitTypes::Zerg_Overlord);
+        u->train(UnitTypes::Zerg_Zergling);
       }
-      else*/
-      // TESTING make sure to add lings back in >.>
-      //if (hasPool && Broodwar->self()->minerals() >= UnitTypes::Zerg_Zergling.mineralPrice() + mineralBuffer)
-      // {
-      //  u->train(UnitTypes::Zerg_Zergling);
-      //}
-      /*else*/ if (droneCount < 18 && Broodwar->self()->minerals() >= UnitTypes::Zerg_Drone.mineralPrice() + mineralBuffer)
+      // Otherwise Train Drones
+      else if (droneCount < 24 && Broodwar->self()->minerals() >= UnitTypes::Zerg_Drone.mineralPrice() + mineralBuffer)
       {
         u->train(u->getType().getRace().getWorker());
       }
@@ -374,48 +335,6 @@ void ExampleAIModule::onFrame()
           u->train(UnitTypes::Zerg_Overlord);
           buildingOverlord = 48;
         }
-        /*
-        // Retrieve the supply provider type in the case that we have run out of supplies
-        UnitType supplyProviderType = u->getType().getRace().getSupplyProvider();
-        static int lastChecked = 0;
-        // If we are supply blocked and haven't tried constructing more recently
-        if (  lastErr == Errors::Insufficient_Supply &&
-        lastChecked + 400 < Broodwar->getFrameCount() &&
-        Broodwar->self()->incompleteUnitCount(supplyProviderType) == 0 )
-        {
-        lastChecked = Broodwar->getFrameCount();
-        // Retrieve a unit that is capable of constructing the supply needed
-        Unit supplyBuilder = u->getClosestUnit(  GetType == supplyProviderType.whatBuilds().first &&
-        (IsIdle || IsGatheringMinerals) &&
-        IsOwned);
-        // If a unit was found
-        if ( supplyBuilder )
-        {
-        if ( supplyProviderType.isBuilding() )
-        {
-        TilePosition targetBuildLocation = Broodwar->getBuildLocation(supplyProviderType, supplyBuilder->getTilePosition());
-        if ( targetBuildLocation )
-        {
-        // Register an event that draws the target build location
-        Broodwar->registerEvent([targetBuildLocation,supplyProviderType](Game*)
-        {
-        Broodwar->drawBoxMap( Position(targetBuildLocation),
-        Position(targetBuildLocation + supplyProviderType.tileSize()),
-        Colors::Blue);
-        },
-        nullptr,  // condition
-        supplyProviderType.buildTime() + 100 );  // frames to run
-        // Order the builder to construct the supply structure
-        supplyBuilder->build( supplyProviderType, targetBuildLocation );
-        }
-        }
-        else
-        {
-        // Train the supply provider (Overlord) if the provider is not a structure
-        supplyBuilder->train( supplyProviderType );
-        }
-        } // closure: supplyBuilder is valid
-        } // closure: insufficient supply */
       } // closure: failed to train idle unit
     }
   } // closure: unit iterator
@@ -426,24 +345,6 @@ void ExampleAIModule::onFrame()
 
 void ExampleAIModule::onSendText(std::string text)
 {
-  // BWTA2 read /analyze to begin map analysis
-  /*if (text == "/analyze")
-  {
-  if (analyzed == false)
-  {
-  Broodwar << "Analyzing map... this may take a minute" << std::endl;
-  //BWTA::analyze();
-  //analyzed = true;
-  //analysis_just_finished = true;
-  //thread seemed to create problems
-  //CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)AnalyzeThread, NULL, 0, NULL);
-  }
-  else
-  {
-  // Send the text to the game if it is not being processed.
-  Broodwar->sendText("%s", text.c_str());
-  }
-  }*/
   Broodwar->sendText("%s", text.c_str());
 
   // Make sure to use %s and pass the text as a parameter,
@@ -451,11 +352,19 @@ void ExampleAIModule::onSendText(std::string text)
 
   //debug trigger
   if (text == "print enemy") {
-    InfoManager::Instance().debug("enemy");
-  } 
+    InfoManager::Instance().debugUnits("enemy");
+  }
   else if (text == "print player")
   {
-    InfoManager::Instance().debug("player");
+    InfoManager::Instance().debugUnits("player");
+  }
+  else if (text == "debug IM on")
+  {
+    InfoManager::Instance().setDebug(true);
+  }
+  else if (text == "debug IM off")
+  {
+    InfoManager::Instance().setDebug(false);
   }
 }
 
@@ -548,19 +457,16 @@ void ExampleAIModule::onUnitDestroy(BWAPI::Unit unit)
   {
     Broodwar->sendText("Player %s has perished.", unit->getType().c_str());
   }
-  else
+  else if (!unit->getPlayer()->isNeutral())
   {
     Broodwar->sendText("Enemy %s has perished.", unit->getType().c_str());
   }
 
   // remove unit type from  unit list if population hits 0
-  InfoManager::Instance().removeUnitInfo(unit);
+  if (!unit->getPlayer()->isNeutral()) InfoManager::Instance().removeUnitInfo(unit);
 
   // reset reserve if it's killed
-  if (unit->getID() == reserve) 
-  {
-    reserve = 0;
-  }
+  if (unit->getID() == reserve) reserve = 0;
 }
 
 void ExampleAIModule::onUnitMorph(BWAPI::Unit unit)
@@ -582,8 +488,8 @@ void ExampleAIModule::onUnitMorph(BWAPI::Unit unit)
   }
 
   // print all morph args
-  Broodwar->sendText("A %s has completed its morph.\n", unit->getType().c_str());
-  
+  //Broodwar->sendText("A %s has completed its morph.", unit->getType().c_str());
+
   // update unit info
   InfoManager::Instance().addUnitInfo(unit);
 }
@@ -621,16 +527,6 @@ void ExampleAIModule::onUnitComplete(BWAPI::Unit unit)
   // update unit info
   if (!unit->getPlayer()->isNeutral()) InfoManager::Instance().addUnitInfo(unit);
 }
-
-// BWTA functions for map analysis
-/* removed for crash
-DWORD WINAPI AnalyzeThread()
-{
-//BWTA::analyze();
-analyzed = true;
-analysis_just_finished = true;
-return 0;
-} */
 
 void ExampleAIModule::drawTerrainData()
 {
