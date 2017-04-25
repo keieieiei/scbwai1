@@ -33,15 +33,15 @@ void Mineral::update()
     // if we've finished following the last drone that left, check to see if there's another
     if (returningWorker == nullptr)
     {
-      for (const Drone& drone : workers)
-      {
-        if (drone.unit->isCarryingMinerals())
-        {
-          returningWorker = &drone;
-          initialReturnFrame = BWAPI::Broodwar->getFrameCount();
-          break;
-        }
-      }
+    for (const Drone& drone : workers)
+    {
+    if (drone.unit->isCarryingMinerals())
+    {
+    returningWorker = &drone;
+    initialReturnFrame = BWAPI::Broodwar->getFrameCount();
+    break;
+    }
+    }
     }
     */
 
@@ -50,15 +50,15 @@ void Mineral::update()
     /*
     for (Drone &drone : workers)
     {
-      if (drone.unit->isCarryingMinerals())
-      {
-        drone.isAtMinerals = false;
-        drone.isReturning = true;
-        drone.initialReturnFrame = BWAPI::Broodwar->getFrameCount();
-        printf("drone leaving: %d\n", workers.size());
-        // Note: Could set the d.mineral pointer to nullptr here
-        //   but we want to associate the return frames with this Mineral
-      }
+    if (drone.unit->isCarryingMinerals())
+    {
+    drone.isAtMinerals = false;
+    drone.isReturning = true;
+    drone.initialReturnFrame = BWAPI::Broodwar->getFrameCount();
+    printf("drone leaving: %d\n", workers.size());
+    // Note: Could set the d.mineral pointer to nullptr here
+    //   but we want to associate the return frames with this Mineral
+    }
     }
     */
     for (Drone *drone : workers)
@@ -83,10 +83,10 @@ void Mineral::update()
     // update our tracking things if so and stop following it
     if (returningWorker != nullptr && !returningWorker->unit->isCarryingMinerals()) // Note: do we have to check for nullptr?
     {
-      int returnFrames = BWAPI::Broodwar->getFrameCount() - initialReturnFrame;
-      ++numReturns;
-      averageReturnFrames = (averageReturnFrames * (numReturns - 1) + returnFrames) / numReturns;
-      returningWorker = nullptr;
+    int returnFrames = BWAPI::Broodwar->getFrameCount() - initialReturnFrame;
+    ++numReturns;
+    averageReturnFrames = (averageReturnFrames * (numReturns - 1) + returnFrames) / numReturns;
+    returningWorker = nullptr;
     }
     */
 

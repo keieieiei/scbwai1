@@ -1,10 +1,11 @@
 #include "UnitInfo.h"
 
 
-UnitInfo::UnitInfo(int uid, BWAPI::UnitType ut)
-  : unitID(uid)
-  , unitType(ut)
+UnitInfo::UnitInfo(const BWAPI::Unit u)
+  : unit(u)
 {
+  this->unitID = u->getID();
+  this->unitType = u->getType();
 }
 
 

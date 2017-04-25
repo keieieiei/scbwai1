@@ -5,9 +5,10 @@ class UnitInfo
 {
 private:
   int unitID;
+  BWAPI::Unit unit;
   BWAPI::UnitType unitType;
 public:
-  UnitInfo(int uid, BWAPI::UnitType ut);
+  UnitInfo(BWAPI::Unit u);
   ~UnitInfo();
 
   int getID();

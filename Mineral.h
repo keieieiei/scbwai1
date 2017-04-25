@@ -5,7 +5,7 @@
 
 class Mineral
 {
-//private:
+  //private:
 public:
   // Between 75 and 90
   // Usually caps at 85  ... even seen a 94 ! wtf
@@ -28,7 +28,7 @@ public:
   void releaseWorker();
 
 
-//public:
+  //public:
   Mineral(const BWAPI::Unit &u);
   ~Mineral();
 

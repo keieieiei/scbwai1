@@ -7,36 +7,46 @@ class InfoManager
 {
 private:
   int thisPlayerID;
-  std::vector<BWAPI::UnitType> livingUnitTypes;
+  std::vector<UnitInfo> playerUnitsInfo;
+  std::vector<BWAPI::UnitType> playerUnitTypes;
 
-  std::vector<UnitInfo> enemyUnitsInfo; // don't want pointers here, the game blacks them out when no visible
+  std::vector<UnitInfo> enemyUnitsInfo;
   std::vector<BWAPI::UnitType> enemyUnitTypes;
 
-  BWAPI::Unitset testEnemyUnits = {};
+  const char* currPlayer;
+  std::vector<UnitInfo> *currUnits;
+  std::vector<BWAPI::UnitType> *currTypes;
+
+  void setCurrentVar(const char* s);
+  void setCurrentVar(BWAPI::Unit u);
+
+  bool debug = false;
 
 public:
   InfoManager();
   ~InfoManager();
 
-  void init();
   void setPlayerID(int);
   int getPlayerID();
-  bool ownedByPlayer(BWAPI::Unit u);
-  std::vector<BWAPI::UnitType> getLivingUnitTypes();
-  bool hasLivingUnitType(BWAPI::UnitType ut, std::vector<BWAPI::UnitType> &l = InfoManager::Instance().livingUnitTypes);
-  void addLivingUnitType(BWAPI::UnitType ut, std::vector<BWAPI::UnitType> &l = InfoManager::Instance().livingUnitTypes);
-  void removeLivingUnitType(BWAPI::UnitType ut, std::vector<BWAPI::UnitType> &l = InfoManager::Instance().livingUnitTypes);
-  void cleanUpUnitTypeList(std::vector<BWAPI::UnitType> &l = InfoManager::Instance().livingUnitTypes);
 
+  bool ownedByPlayer(BWAPI::Unit u);
+
+  std::vector<BWAPI::UnitType> getPlayerUnitTypes();
+
+  bool hasUnitType(BWAPI::UnitType ut, std::vector<BWAPI::UnitType> &v = InfoManager::Instance().playerUnitTypes);
+  void addUnitType(BWAPI::UnitType ut, std::vector<BWAPI::UnitType> &v = InfoManager::Instance().playerUnitTypes);
+  void removeUnitType(BWAPI::UnitType ut, std::vector<BWAPI::UnitType> &v = InfoManager::Instance().playerUnitTypes);
+  int numUnitType(BWAPI::UnitType, std::vector<UnitInfo> v);
+
+  void addUnitInfo(BWAPI::Unit u);
+  void removeUnitInfo(BWAPI::Unit u);
+  bool hasUnitInfo(BWAPI::Unit u);
 
   std::vector<BWAPI::UnitType> getEnemyUnitTypes();
   std::vector<UnitInfo> getEnemyUnitsInfo();
-  void addEnemyUnit(BWAPI::Unit u);
-  void removeEnemyUnit(BWAPI::Unit u);
-  int numEnemyType(BWAPI::UnitType ut);
-  void cleanUpEnemyTypes(); // fix cleanUpUnitTypeList to work with both later...?
 
-  void debugEnemy();
+  void debugUnits(const char* s);
+  void setDebug(bool b);
 
   static InfoManager & Instance(){
     static InfoManager instance;
