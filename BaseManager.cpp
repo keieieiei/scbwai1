@@ -23,23 +23,31 @@ BaseManager::~BaseManager() {}
 
 void BaseManager::update()
 {
+  // Remove minerals that don't exist
+  minerals.erase(std::remove_if(std::begin(minerals), std::end(minerals), [](const std::shared_ptr<Mineral> &m){ return !m->unit->exists(); }), std::end(minerals));
 
-  // check for workers that don't exist and update if they contribute to a mineral count
+  // check for workers that lost their minerals to the previous statement
+  //  then check for workers that don't exist and update their mineral if they contribute to a mineral count
   // Note: this might be an invariant that says we should implement mineral as a class
-  for (const auto &worker : workers)
+  for (auto &worker : workers)
+  {
+    // Check for removed mineral and return the workers from it to a default state
+    if (worker.state != Worker::DEFAULT && worker.resource.expired())
+      worker.state = Worker::DEFAULT;
+    // Update worker if they're about to get removed and contribute to a mineral's count
     if (!worker.unit->exists() && (worker.state == Worker::MOVING_TO_GATHER || worker.state == Worker::AT_GATHER_POINT))
       --worker.resource.lock()->numWorkers;
+  }
 
   // Remove workers that don't exist
   workers.erase(std::remove_if(std::begin(workers), std::end(workers), [](const Worker &w){ return !w.unit->exists(); }), std::end(workers));
 
-  // Remove minerals that don't exist
-  minerals.erase(std::remove_if(std::begin(minerals), std::end(minerals), [](const std::shared_ptr<Mineral> &m){ return !m->unit->exists(); }), std::end(minerals));
-
   // Check if we've completely run out of minerals or don't have a hatchery (prevents some bad pointer calls)
   // TODO: fully implement this
   if (minerals.size() == 0 || !main->exists())
+  {
     return;
+  }
 
   // Update Mineral initialGatherFrame tracker if it's not locked by a gatherer
   for (const auto &mineral : minerals)
@@ -52,10 +60,6 @@ void BaseManager::update()
   {
     // DEBUG
     BWAPI::Broodwar->drawTextMap(worker.unit->getPosition(), "%d", worker.state);
-
-    // Check for removed mineral and return the workers from it to a default state
-    if (worker.state != Worker::DEFAULT && worker.resource.expired())
-      worker.state = Worker::DEFAULT;
 
     switch (worker.state)
     {
