@@ -86,7 +86,8 @@ void InfoManager::addUnitInfo(BWAPI::Unit u)
 
       if (debug) printf("Updated %s unit from %s to %s id %d\n", currPlayer, prevType.c_str(), u->getType().c_str(), u->getID());
 
-      (*ui).setType(u->getType());
+      ui->updateUnitInfo(u);
+
       if (numUnitType(prevType, *currUnits) == 0)
       {
         removeUnitType(prevType, *currTypes);
@@ -138,7 +139,7 @@ void InfoManager::debugUnits(const char* s){
 
   printf("%s units logged:\n", s);
   for (auto &u : *currUnits) {
-    printf("%s %d\n", u.getType().c_str(), u.getID());
+    printf("%s %d @ %d, %d; base @ %d, %d\n", u.getType().c_str(), u.getID(), u.getPosition().x, u.getPosition().y, u.getStartLocBase().x, u.getStartLocBase().y);
   }
   printf("\n\n# of each %s type:\n", s);
   for (auto ut : *currTypes) {
