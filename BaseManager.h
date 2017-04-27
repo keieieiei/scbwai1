@@ -37,6 +37,7 @@ private:
   BWAPI::Unit main;
   std::vector<Worker> workers;
   std::vector<std::shared_ptr<Mineral>> minerals;
+  Mineral vespene;
 
 public:
   BaseManager(const BWAPI::Unit unit);
@@ -47,4 +48,5 @@ public:
   bool containsWorker(BWAPI::Unit unit);
   void addWorker(BWAPI::Unit unit);
   BWAPI::Unit takeWorker();
+  BWAPI::Position getPosition();
 };

@@ -13,7 +13,7 @@ BaseManager::BaseManager(const BWAPI::Unit unit)
     }
     else if (u->getType() == BWAPI::UnitTypes::Resource_Vespene_Geyser)
     {
-      // TODO:  add vespene
+      // TODO: add vespene
     }
     // TODO: what if u->getType().isRefinery()
   }
@@ -168,6 +168,14 @@ BWAPI::Unit BaseManager::takeWorker()
   BWAPI::Unit unit = workers.back().unit;
   workers.pop_back();
   return unit;
+}
+
+BWAPI::Position BaseManager::getPosition()
+{
+  if (!main->exists())
+    return BWAPI::Position();
+  else
+    return main->getPosition();
 }
 
 const int BaseManager::gatherFrames = 80;

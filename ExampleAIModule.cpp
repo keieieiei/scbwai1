@@ -22,6 +22,9 @@ std::unique_ptr<BaseManager> mainManager;
 // reserve a unit - set to some unlikely non-ID value to turn off
 int reserve = 9000;
 
+// TODO:  should be std::shared_ptr<UnitHandler> in the future but i'm too lazy to implement that inheritance yet
+static std::unordered_map<Unit, std::shared_ptr<ZerglingHandler>> unitLookup;
+
 void ExampleAIModule::onStart()
 {
   // get player id
@@ -67,6 +70,9 @@ void ExampleAIModule::onStart()
       Broodwar << "The matchup is " << Broodwar->self()->getRace() << " vs " << Broodwar->enemy()->getRace() << std::endl;
   }
 
+  // make sure unitLookup doesn't have to rehash; may need more if we include buildings in it or build over 100 overlords e.e
+  unitLookup.reserve(500);
+
   // Read & analyze map information with BWTA
   BWTA::readMap();
   BWTA::analyze();
@@ -92,6 +98,9 @@ void ExampleAIModule::onStart()
   // causing build issues for some reason w/o if != nullptr
   if (m != nullptr) mainManager = std::make_unique<BaseManager>(BaseManager(m));
 
+
+
+
   // open a console for printing debug msgs
   FILE *df;
   AllocConsole();
@@ -100,6 +109,7 @@ void ExampleAIModule::onStart()
   freopen_s(&df, "conout$", "w", stderr);
   printf("Debugging Window:\n");
 
+  // for some rng chance stuff
   srand(time(NULL));
 }
 
@@ -179,6 +189,41 @@ void ExampleAIModule::onFrame()
 
   // TESTING:  move back to end of onFrame()
   mainManager->update();
+
+  // do Zergling stuff through unitLookup (should later be all unit stuff in here)
+  for (auto &unit : unitLookup)
+  {
+    // Ignore the unit if it no longer exists
+    // Make sure to include this block when handling any Unit pointer!
+    if (!unit.second->unit->exists())
+      continue;
+
+    // Ignore the unit if it has one of the following status ailments
+    if (unit.second->unit->isLockedDown() || unit.second->unit->isMaelstrommed() || unit.second->unit->isStasised())
+      continue;
+
+    // Ignore the unit if it is in one of the following states
+    if (unit.second->unit->isLoaded() || !unit.second->unit->isPowered() || unit.second->unit->isStuck())
+      continue;
+
+    // spoof implementation of a squad
+    if (Broodwar->self()->allUnitCount(UnitTypes::Zerg_Zergling) > 20)
+    {
+      for (BWTA::BaseLocation * startLocation : BWTA::getStartLocations())
+      {
+        if (!BWAPI::Broodwar->isExplored(startLocation->getTilePosition()))
+        {
+          unit.second->attack(startLocation->getPosition());
+          continue;
+        }
+      }
+    }
+    else
+      unit.second->defend(mainManager->getPosition());
+
+    // update units
+    unit.second->update();
+  }
 
   // Prevent spamming by only running our onFrame once every number of latency frames.
   // Latency frames are the number of frames before commands are processed.
@@ -284,17 +329,11 @@ void ExampleAIModule::onFrame()
 
     if (u->getType() == UnitTypes::Zerg_Zergling)
     {
-      // shitty attack & scouting subroutine
-      if (!u->attack(u->getClosestUnit(Filter::IsEnemy)))
+      //inefficient way to do this but whatevs, until we update our unitLookup to operate solely off unit create or whatever this'll make do
+      // add to our unitLookup if it's not already in it
+      if (unitLookup.count(u) == 0)
       {
-        for (BWTA::BaseLocation * startLocation : BWTA::getStartLocations())
-        {
-          if (!BWAPI::Broodwar->isExplored(startLocation->getTilePosition()))
-          {
-            u->attack(startLocation->getPosition());
-            continue;
-          }
-        }
+        unitLookup[u] = std::make_shared<ZerglingHandler>(ZerglingHandler(u));
       }
     }
     // If the unit is a worker unit **but not the reserve!
@@ -341,6 +380,7 @@ void ExampleAIModule::onFrame()
 
   // clean up enemy list (should prolly move this later)
   //InfoManager::Instance().cleanUpEnemyTypes();
+
 }
 
 void ExampleAIModule::onSendText(std::string text)
