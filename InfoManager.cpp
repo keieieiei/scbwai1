@@ -25,12 +25,19 @@ int InfoManager::getPlayerID()
 
 bool InfoManager::ownedByPlayer(BWAPI::Unit u)
 {
+
   return u->getPlayer()->getID() == thisPlayerID;
 }
 
+////////////////////////// UnitType ////////////////////////////////////
 std::vector<BWAPI::UnitType> InfoManager::getPlayerUnitTypes()
 {
   return playerUnitTypes;
+}
+
+std::vector<BWAPI::UnitType> InfoManager::getEnemyUnitTypes()
+{
+  return enemyUnitTypes;
 }
 
 bool InfoManager::hasUnitType(BWAPI::UnitType ut, std::vector<BWAPI::UnitType> &v)
@@ -50,9 +57,20 @@ void InfoManager::removeUnitType(BWAPI::UnitType ut, std::vector<BWAPI::UnitType
   if (ui != v.end()) v.erase(ui);
 }
 
-std::vector<BWAPI::UnitType> InfoManager::getEnemyUnitTypes()
+int InfoManager::numUnitType(BWAPI::UnitType ut, std::vector<UnitInfo> v)
 {
-  return enemyUnitTypes;
+  int num = 0;
+  for (auto u : v)
+  {
+    if (u.getType() == ut) num++;
+  }
+  return num;
+}
+
+////////////////////////// UnitInfo ////////////////////////////////////
+std::vector<UnitInfo> InfoManager::getPlayerUnitsInfo()
+{
+  return playerUnitsInfo;
 }
 
 std::vector<UnitInfo> InfoManager::getEnemyUnitsInfo()
@@ -81,10 +99,10 @@ void InfoManager::addUnitInfo(BWAPI::Unit u)
     //       enemies atm
     // TODO: check if currUnits->unit->type is the same type as currUnits->type
     // unit already exists; update the type if necessary (morphs, etc)
-    if ((*ui).getType() != u->getType()) {
+    if (ui->getType() != u->getType()) {
       BWAPI::UnitType prevType = ui->getType();
 
-      if (debug) printf("Updated %s unit from %s to %s id %d\n", currPlayer, prevType.c_str(), u->getType().c_str(), u->getID());
+      if (debug) printf("IM: Updated %s unit from %s to %s id %d\n", currPlayer, prevType.c_str(), u->getType().c_str(), u->getID());
 
       ui->updateUnitInfo(u);
 
@@ -97,6 +115,15 @@ void InfoManager::addUnitInfo(BWAPI::Unit u)
 
   // update unit type list
   addUnitType(u->getType(), *currTypes);
+}
+
+void InfoManager::updateUnitInfo(BWAPI::Unit u) {
+  setCurrentVar(u);
+  auto ui = std::find(currUnits->begin(), currUnits->end(), u);
+  if (ui != currUnits->end())
+  {
+    ui->updateUnitInfo(u);
+  }
 }
 
 void InfoManager::removeUnitInfo(BWAPI::Unit u)
@@ -124,36 +151,22 @@ bool InfoManager::hasUnitInfo(BWAPI::Unit u)
   return ui != v.end();
 }
 
-int InfoManager::numUnitType(BWAPI::UnitType ut, std::vector<UnitInfo> v)
+////////////////////////// EnemyInfo ////////////////////////////////////
+// excludes resources
+std::vector<UnitInfo> InfoManager::getEnemyBuildings()
 {
-  int num = 0;
-  for (auto u : v)
+  std::vector<UnitInfo> res;
+  for (auto ui : enemyUnitsInfo)
   {
-    if (u.getType() == ut) num++;
+    if (ui.getType().isBuilding() && !ui.getType().isNeutral())
+    {
+      res.push_back(ui);
+    }
   }
-  return num;
+  return res;
 }
 
-void InfoManager::debugUnits(const char* s){
-  setCurrentVar(s);
-
-  printf("%s units logged:\n", s);
-  for (auto &u : *currUnits) {
-    printf("%s %d @ %d, %d; base @ %d, %d\n", u.getType().c_str(), u.getID(), u.getPosition().x, u.getPosition().y, u.getStartLocBase().x, u.getStartLocBase().y);
-  }
-  printf("\n\n# of each %s type:\n", s);
-  for (auto ut : *currTypes) {
-    printf("%s: %d\n", ut.c_str(), numUnitType(ut, *currUnits));
-  }
-  printf("\n\n# of %s types: %d\n", s, currTypes->size());
-  printf("last known %s units: %d\n", s, currUnits->size());
-}
-
-void InfoManager::setDebug(bool b)
-{
-  debug = b;
-}
-
+////////////////////////// Util ////////////////////////////////////
 void InfoManager::setCurrentVar(BWAPI::Unit u)
 {
   if (ownedByPlayer(u))
@@ -171,4 +184,29 @@ void InfoManager::setCurrentVar(const char* s)
   currPlayer = s;
   currUnits = (s == "player") ? &playerUnitsInfo : &enemyUnitsInfo;
   currTypes = (s == "player") ? &playerUnitTypes : &enemyUnitTypes;
+}
+
+////////////////////////// Debug ////////////////////////////////////
+void InfoManager::debugUnits(const char* s){
+  setCurrentVar(s);
+
+  printf("%s units logged:\n", s);
+  for (auto &u : *currUnits) {
+    printf("%s %d @ %d, %d; base @ %d, %d\n", u.getType().c_str(), u.getID(), u.getPosition().x, u.getPosition().y, u.getStartLocBase().x, u.getStartLocBase().y);
+  }
+  printf("\n\n# of each %s type:\n", s);
+  for (auto ut : *currTypes) {
+    printf("%s: %d\n", ut.c_str(), numUnitType(ut, *currUnits));
+  }
+  printf("\n\n# of %s types: %d\n", s, currTypes->size());
+  printf("last known %s units: %d\n\n", s, currUnits->size());
+}
+
+void InfoManager::debugEnemyBuildings(){
+  printf("Enemy Buildings:\n");
+  for (auto &u : getEnemyBuildings())
+  {
+    printf("%s %d at %d, %d\n", u.getType().c_str(),u.getID(), u.getPosition().x, u.getPosition().y);
+  }
+
 }

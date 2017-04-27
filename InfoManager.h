@@ -1,6 +1,7 @@
 #pragma once
 #include <BWAPI.h>
 #include "UnitInfo.h"
+#include "Debug.h"
 #include <vector>
 
 class InfoManager
@@ -21,7 +22,6 @@ private:
   void setCurrentVar(BWAPI::Unit u);
 
   bool debug = false;
-
 public:
   InfoManager();
   ~InfoManager();
@@ -32,24 +32,30 @@ public:
   bool ownedByPlayer(BWAPI::Unit u);
 
   std::vector<BWAPI::UnitType> getPlayerUnitTypes();
+  std::vector<BWAPI::UnitType> getEnemyUnitTypes();
 
   bool hasUnitType(BWAPI::UnitType ut, std::vector<BWAPI::UnitType> &v = InfoManager::Instance().playerUnitTypes);
   void addUnitType(BWAPI::UnitType ut, std::vector<BWAPI::UnitType> &v = InfoManager::Instance().playerUnitTypes);
   void removeUnitType(BWAPI::UnitType ut, std::vector<BWAPI::UnitType> &v = InfoManager::Instance().playerUnitTypes);
   int numUnitType(BWAPI::UnitType, std::vector<UnitInfo> v);
 
+  std::vector<UnitInfo> getPlayerUnitsInfo();
+  std::vector<UnitInfo> getEnemyUnitsInfo();
+
   void addUnitInfo(BWAPI::Unit u);
   void removeUnitInfo(BWAPI::Unit u);
   bool hasUnitInfo(BWAPI::Unit u);
+  void updateUnitInfo(BWAPI::Unit u);
 
-  std::vector<BWAPI::UnitType> getEnemyUnitTypes();
-  std::vector<UnitInfo> getEnemyUnitsInfo();
+  std::vector<UnitInfo> getEnemyBuildings();
 
-  void debugUnits(const char* s);
-  void setDebug(bool b);
 
   static InfoManager & Instance(){
     static InfoManager instance;
     return instance;
   }
+
+  void debugUnits(const char* s);
+  void debugEnemyBuildings();
+  void setDebug(bool b) { debug = b; };
 };
