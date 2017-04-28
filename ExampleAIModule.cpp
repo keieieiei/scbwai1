@@ -29,6 +29,14 @@ static std::unordered_map<Unit, std::shared_ptr<ZerglingHandler>> unitLookup;
 
 void ExampleAIModule::onStart()
 {
+  // open a console for printing debug msgs
+  FILE *df;
+  AllocConsole();
+  freopen_s(&df, "conin$", "r", stdin);
+  freopen_s(&df, "conout$", "w", stdout);
+  freopen_s(&df, "conout$", "w", stderr);
+  printf("Debugging Window:\n");
+
   // get player id
   InfoManager::Instance().setPlayerID(Broodwar->self()->getID());
 
@@ -104,14 +112,6 @@ void ExampleAIModule::onStart()
   buildExecutor->giveMainManager(mainManager);
 
   scoutManager = std::make_shared<ScoutManager>(ScoutManager());
-  
-  // open a console for printing debug msgs
-  FILE *df;
-  AllocConsole();
-  freopen_s(&df, "conin$", "r", stdin);
-  freopen_s(&df, "conout$", "w", stdout);
-  freopen_s(&df, "conout$", "w", stderr);
-  printf("Debugging Window:\n");
 
   // for some rng chance stuff
   srand(time(NULL));
@@ -187,7 +187,7 @@ void ExampleAIModule::onFrame()
   }
 
   // Enemy Unit Debug
-  rowPos = 20;
+  rowPos = 40;
   for (BWAPI::UnitType ut : InfoManager::Instance().getEnemyUnitTypes()){
     Broodwar->drawTextScreen(500, rowPos, "%s: %d", ut.c_str(), InfoManager::Instance().numUnitType(ut, InfoManager::Instance().getEnemyUnitsInfo()));
     rowPos += 20;
@@ -198,6 +198,13 @@ void ExampleAIModule::onFrame()
   mainManager->update();
   buildExecutor->update();
   scoutManager->update();
+
+  // if we've already discovered the main base and obliterated it, find more bases
+  if (scoutManager->isMainExplored() && InfoManager::Instance().getEnemyBuildings().empty())
+  {
+    scoutManager->findEnemyBase();
+    Broodwar->drawTextScreen(500, 20, "find moaaarrrr");
+  }
 
   // do Zergling stuff through unitLookup (should later be all unit stuff in here)
   for (auto &unit : unitLookup)
@@ -493,11 +500,12 @@ void ExampleAIModule::onUnitDiscover(BWAPI::Unit unit)
   if (!InfoManager::Instance().ownedByPlayer(unit) && !unit->getPlayer()->isNeutral())
   {
     InfoManager::Instance().addUnitInfo(unit);
-  }
 
-  // Scout Manager bullshit zzzz
-  if (unit->getType().isResourceDepot())
-    scoutManager->addEnemyBase(unit->getPosition());
+    // Scout Manager bullshit zzzz
+    // don't trigger addenemybase unless the unit belongs to an enemy
+    if (unit->getType().isResourceDepot())
+      scoutManager->addEnemyBase(unit->getPosition());
+  }
 }
 
 void ExampleAIModule::onUnitEvade(BWAPI::Unit unit)

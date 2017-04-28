@@ -10,6 +10,11 @@ ScoutManager::ScoutManager()
   BWAPI::Position pos = BWAPI::Position(BWAPI::Broodwar->self()->getStartLocation());
   std::sort(std::begin(startingLocations), std::end(startingLocations),
     [&pos](BWAPI::Position &a, BWAPI::Position &b){ return pos.getDistance(a) < pos.getDistance(b); });
+
+  // hackityhack
+  mainExplored = false;
+  printf("%d start locations found\n", BWTA::getStartLocations().size());
+  printf("%d base locations found\n", BWTA::getBaseLocations().size());
 }
 
 ScoutManager::~ScoutManager()
@@ -43,7 +48,20 @@ void ScoutManager::update()
 
 void ScoutManager::findEnemyBase()
 {
-
+  // is this working? i have no idea. the case is so rare i'm not seeing happen r.i.p.
+  // update: seen it once; but the entire map was discovered but no enemy to be found....  wtf?
+  // we've found and destroyed main but the game hasn't ended; search; super super super hacky lazy way
+  for (const BWTA::BaseLocation *b : BWTA::getBaseLocations())
+  {
+    if (!BWAPI::Broodwar->isExplored(b->getTilePosition()))
+    {
+      for (auto u : overlords)
+      {
+        overlords.back()->revealTile(b->getPosition());
+      }
+      continue;
+    }
+  }
 }
 
 void ScoutManager::addEnemyBase(BWAPI::Position pos)
@@ -53,13 +71,15 @@ void ScoutManager::addEnemyBase(BWAPI::Position pos)
     int minDistance = std::numeric_limits<int>::max();
     for (const auto &startingLocation : startingLocations)
     {
-      if (pos.getDistance(startingLocation) < minDistance)
+      if (pos.getApproxDistance(startingLocation) < minDistance)
       {
         minDistance = pos.getApproxDistance(startingLocation);
         enemyMain = pos;
       }
     }
   }
+  //printf("added main base at %d, %d\n", pos.x, pos.y);
+  mainExplored = true;
 }
 
 void ScoutManager::addScout(BWAPI::Unit u)
@@ -91,4 +111,10 @@ bool ScoutManager::containsUnit(BWAPI::Unit u)
 BWAPI::Position ScoutManager::getFurthestStartingLocation()
 {
   return startingLocations.back();
+}
+
+// hacky
+bool ScoutManager::isMainExplored()
+{
+  return mainExplored;
 }

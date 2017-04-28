@@ -1,13 +1,15 @@
 #include <BWAPI.h>
+#include <BWTA.h>
 #include <memory>
 #include "OverlordHandler.h"
+#include "BaseManager.h"
 
 /*
   Explores the enemy base and forces
 
   Information Required:
     Starting Base Locations (provided by BWTA)
-    All Base Locations (provided by BWTA?)
+    All Base Locations (base locations near minerals provided by BWTA)
     Locations or Buildings/Tech that infomanager or strategymanager might desire
     Areas that we should provide vision in case something passes through (might be able to determine this here) (eg: dropship paths or expansion points)
     recon of enemy forces locations
@@ -41,7 +43,7 @@ private:
   std::vector<BWAPI::Unit> drones;
   BWAPI::Position enemyMain;
   std::vector<BWAPI::Position> startingLocations;
-
+  bool mainExplored = false; // hacky
 public:
   ScoutManager();
   ~ScoutManager();
@@ -53,4 +55,6 @@ public:
   bool containsUnit(BWAPI::Unit u);
   // hacky hack hack
   BWAPI::Position getFurthestStartingLocation();
+  // hacky
+  bool isMainExplored();
 };
