@@ -2,7 +2,6 @@
 #include <BWTA.h>
 #include <memory>
 #include "OverlordHandler.h"
-#include "BaseManager.h"
 
 /*
   Explores the enemy base and forces
