@@ -34,13 +34,14 @@ private:
     WorkerState state;
   };
 
-  BWAPI::Unit main;
   std::vector<Worker> workers;
   std::vector<std::shared_ptr<Mineral>> minerals;
 
 public:
   BaseManager(const BWAPI::Unit unit);
   ~BaseManager();
+
+  BWAPI::Unit main;
 
   void update();
   int  numWorkers();

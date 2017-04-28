@@ -1,7 +1,6 @@
 #pragma once
 #include <BWAPI.h>
 #include "UnitInfo.h"
-#include "Debug.h"
 #include <vector>
 
 class InfoManager
@@ -20,6 +19,9 @@ private:
 
   void setCurrentVar(const char* s);
   void setCurrentVar(BWAPI::Unit u);
+
+  // AKG:
+  BWAPI::Position enemyStartingPosition;
 
   bool debug = false;
 public:

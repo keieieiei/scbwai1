@@ -1,6 +1,5 @@
 #pragma once
 #include <BWAPI.h>
-#include "Debug.h"
 
 class UnitInfo
 {

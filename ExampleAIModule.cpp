@@ -18,7 +18,9 @@ int morphCount;
 int mineralBuffer;
 // holds the row position to avoid overlap
 int rowPos;
-std::unique_ptr<BaseManager> mainManager;
+std::shared_ptr<BaseManager> mainManager;
+std::shared_ptr<BuildExecutor> buildExecutor;
+std::shared_ptr<ScoutManager> scoutManager;
 // reserve a unit - set to some unlikely non-ID value to turn off
 int reserve = 9000;
 
@@ -96,7 +98,12 @@ void ExampleAIModule::onStart()
     }
   }
   // causing build issues for some reason w/o if != nullptr
-  if (m != nullptr) mainManager = std::make_unique<BaseManager>(BaseManager(m));
+  if (m != nullptr) mainManager = std::make_shared<BaseManager>(BaseManager(m));
+
+  buildExecutor = std::make_shared<BuildExecutor>(BuildExecutor(BuildOrder::FIVEPOOL));
+  buildExecutor->giveMainManager(mainManager);
+
+  scoutManager = std::make_shared<ScoutManager>(ScoutManager());
   
   // open a console for printing debug msgs
   FILE *df;
@@ -189,6 +196,8 @@ void ExampleAIModule::onFrame()
 
   // TESTING:  move back to end of onFrame()
   mainManager->update();
+  buildExecutor->update();
+  scoutManager->update();
 
   // do Zergling stuff through unitLookup (should later be all unit stuff in here)
   for (auto &unit : unitLookup)
@@ -207,27 +216,23 @@ void ExampleAIModule::onFrame()
       continue;
 
     // spoof implementation of a squad
-    if (Broodwar->self()->allUnitCount(UnitTypes::Zerg_Zergling) > 20)
+    if (Broodwar->self()->allUnitCount(UnitTypes::Zerg_Zergling) > 1)
     {
-      for (BWTA::BaseLocation * startLocation : BWTA::getStartLocations())
-      {
-        if (!BWAPI::Broodwar->isExplored(startLocation->getTilePosition()))
-        {
-          unit.second->attack(startLocation->getPosition());
-          continue;
-        }
         // added ad hoc way to have the units keep attacking (there's some sort of weird bug where they stop attacking even tho
         // there are still discovered enemy buildings at a base)
-        else if (!InfoManager::Instance().getEnemyBuildings().empty())
+        if (!InfoManager::Instance().getEnemyBuildings().empty())
         {
-          Broodwar->sendText("attack %s @ %d, %d", InfoManager::Instance().getEnemyBuildings().at(0).getType().c_str(), InfoManager::Instance().getEnemyBuildings().at(0).getPosition().x, InfoManager::Instance().getEnemyBuildings().at(0).getPosition().y);
+          //Broodwar->sendText("attack %s @ %d, %d", InfoManager::Instance().getEnemyBuildings().at(0).getType().c_str(), InfoManager::Instance().getEnemyBuildings().at(0).getPosition().x, InfoManager::Instance().getEnemyBuildings().at(0).getPosition().y);
           unit.second->attack(InfoManager::Instance().getEnemyBuildings().at(0).getPosition());
-          continue;
         }
-      }
+        else if (!BWAPI::Broodwar->isExplored(BWAPI::TilePosition(scoutManager->getFurthestStartingLocation())))
+        {
+          unit.second->attack(scoutManager->getFurthestStartingLocation());
+        }
+
     }
     else
-      unit.second->defend(mainManager->getPosition());
+      unit.second->defend(mainManager->main->getPosition());
 
     // update units
     unit.second->update();
@@ -250,6 +255,7 @@ void ExampleAIModule::onFrame()
   }
   // Pool Building Code; frame delay if it fails to build
   // TESTING : remove the if true and make 2nd else if an if to undo
+  /*
   if (!hasPool && buildingPool == 0 && Broodwar->self()->minerals() >= UnitTypes::Zerg_Spawning_Pool.mineralPrice())
   {
     //mineralBuffer += UnitTypes::Zerg_Spawning_Pool.mineralPrice();
@@ -274,6 +280,7 @@ void ExampleAIModule::onFrame()
       buildingHatch = 240;
     }
   }
+  */
 
   // Iterate through all the units that we own
   for (auto &u : Broodwar->self()->getUnits())
@@ -356,8 +363,24 @@ void ExampleAIModule::onFrame()
         mainManager->addWorker(u);
       }
     }
-    else if (u->getType().isResourceDepot()) // A resource depot is a Command Center, Nexus, or Hatchery
+    else if (u->getType() == UnitTypes::Zerg_Larva)
     {
+      if (!buildExecutor->containsLarva(u))
+        buildExecutor->addLarva(u);
+    }
+    else if (u->getType() == UnitTypes::Zerg_Overlord)
+    {
+      if (!scoutManager->containsUnit(u))
+        scoutManager->addScout(u);
+    }
+    else if (u->getType() == UnitTypes::Zerg_Spawning_Pool)
+    {
+      // fuck this hack gonna cause problems as soon as we swap builds TODO FIX POTENTIAL ISSUE ALERT ALERT i'm too tired i just wanna finish this class and not have it crash pls
+      if (!u->isCompleted() && u->getRemainingBuildTime() < 400 && mainManager->numWorkers() > 5)
+        scoutManager->addScout(mainManager->takeWorker());
+    }
+    else if (u->getType().isResourceDepot()) // A resource depot is a Command Center, Nexus, or Hatchery
+    { /*
       // Train Zerglings if we have a Spawning Pool with a 70% chance 
       if (hasPool && Broodwar->self()->minerals() >= UnitTypes::Zerg_Zergling.mineralPrice() + mineralBuffer && rand() % 10 > 2)
       {
@@ -386,6 +409,7 @@ void ExampleAIModule::onFrame()
           buildingOverlord = 48;
         }
       } // closure: failed to train idle unit
+      */
     }
   } // closure: unit iterator
 
@@ -470,6 +494,10 @@ void ExampleAIModule::onUnitDiscover(BWAPI::Unit unit)
   {
     InfoManager::Instance().addUnitInfo(unit);
   }
+
+  // Scout Manager bullshit zzzz
+  if (unit->getType().isResourceDepot())
+    scoutManager->addEnemyBase(unit->getPosition());
 }
 
 void ExampleAIModule::onUnitEvade(BWAPI::Unit unit)

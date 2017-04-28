@@ -7,6 +7,9 @@
 #include "InfoManager.h"
 #include "BaseManager.h"
 #include "UnitInfo.h"
+#include "ZerglingHandler.h"
+#include "BuildExecutor.h"
+#include "ScoutManager.h"
 
 DWORD WINAPI AnalyzeThread();
 

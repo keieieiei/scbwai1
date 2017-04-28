@@ -155,6 +155,7 @@ void BaseManager::addWorker(BWAPI::Unit unit)
 
 BWAPI::Unit BaseManager::takeWorker()
 {
+  printf("takeworker worker size %d", workers.size());
   if (workers.size() < 1)
     return nullptr;
 
