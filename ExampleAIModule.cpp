@@ -113,19 +113,19 @@ void ExampleAIModule::onStart()
   if (scanf_s("%8s", bo) == 1)
     puts(bo);
 
-  if (strcmp(bo, "fivepool"))
+  if (strcmp(bo,"fivepool") == 0)
   {
-    printf("setting build order to %s\n", bo);
+    printf("setting build order to FIVEPOOL\n");
     buildExecutor = std::make_shared<BuildExecutor>(BuildExecutor(BuildOrder::FIVEPOOL));
   }
-  else if (strcmp(bo, "fourpool"))
+  else if (strcmp(bo, "fourpool") == 0)
   {
-    printf("setting build order to %s\n", bo);
+    printf("setting build order to FOURPOOL\n", bo);
     buildExecutor = std::make_shared<BuildExecutor>(BuildExecutor(BuildOrder::FOURPOOL));
   }
-  else if (strcmp(bo, "ninepool"))
+  else if (strcmp(bo, "ninepool") == 0)
   {
-    printf("setting build order to %s\n", bo);
+    printf("setting build order to NINEPOOL\n", bo);
     buildExecutor = std::make_shared<BuildExecutor>(BuildExecutor(BuildOrder::NINEPOOL));
   }
   else
