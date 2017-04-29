@@ -405,17 +405,18 @@ void ExampleAIModule::onFrame()
       if (!scoutManager->containsUnit(u))
         scoutManager->addScout(u);
     }
-    else if (scoutManager->getScoutConditionFunction(buildExecutor->getBuildOrder())(u, mainManager))
+    /*else if (scoutManager->getScoutConditionFunction(buildExecutor->getBuildOrder())(u, mainManager))
     {
       printf("took worker from dynamic scout condition function\n");
       scoutManager->addScout(mainManager->takeWorker());
-    }
-    /*else if (u->getType() == UnitTypes::Zerg_Spawning_Pool)
+    }*/
+    else if (u->getType() == UnitTypes::Zerg_Spawning_Pool)
     {
       // fuck this hack gonna cause problems as soon as we swap builds TODO FIX POTENTIAL ISSUE ALERT ALERT i'm too tired i just wanna finish this class and not have it crash pls
-      if (!u->isCompleted() && u->getRemainingBuildTime() < 400 && mainManager->numWorkers() > 5)
+      //if (!u->isCompleted() && u->getRemainingBuildTime() < 400 && mainManager->numWorkers() > 5)
+      if (!u->isCompleted() && u->getRemainingBuildTime() < 400 && scoutManager->numDrones() == 0 && scoutManager->isMainFound())
         scoutManager->addScout(mainManager->takeWorker());
-    }
+    }/*
     else if (u->getType().isResourceDepot()) // A resource depot is a Command Center, Nexus, or Hatchery
     { 
       // Train Zerglings if we have a Spawning Pool with a 70% chance 

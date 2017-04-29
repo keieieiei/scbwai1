@@ -119,6 +119,16 @@ bool ScoutManager::isMainExplored()
   return mainExplored;
 }
 
+bool ScoutManager::isMainFound()
+{
+  return enemyMain.isValid();
+}
+
+int ScoutManager::numDrones()
+{
+  return drones.size();
+}
+
 scdef ScoutManager::getScoutConditionFunction(BuildOrder bo)
 {
   switch (bo)
@@ -143,7 +153,7 @@ bool fourpoolscdef(BWAPI::Unit u, std::shared_ptr<BaseManager> bm)
 {
   if (u->getType() == BWAPI::UnitTypes::Zerg_Spawning_Pool)
   {
-    if (!u->isCompleted() && u->getRemainingBuildTime() < 400 && bm->numWorkers() > 4)
+    if (!u->isCompleted() && u->getRemainingBuildTime() < 400 && bm->numWorkers() > 3)
       return true;
   }
   return false;

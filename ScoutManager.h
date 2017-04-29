@@ -67,5 +67,7 @@ public:
   BWAPI::Position getFurthestStartingLocation();
   // hacky
   bool isMainExplored();
+  bool isMainFound();
+  int numDrones();
   scdef getScoutConditionFunction(BuildOrder bo);
 };
