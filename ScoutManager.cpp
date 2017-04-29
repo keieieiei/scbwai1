@@ -118,3 +118,53 @@ bool ScoutManager::isMainExplored()
 {
   return mainExplored;
 }
+
+scdef ScoutManager::getScoutConditionFunction(BuildOrder bo)
+{
+  switch (bo)
+  {
+  case BuildOrder::FOURPOOL:
+    return &fourpoolscdef;
+  case BuildOrder::FIVEPOOL:
+      return &fivepoolscdef;
+  case BuildOrder::NINEPOOL:
+    return &ninepoolscdef;
+  default:
+    return &defaultscdef;
+  }
+}
+
+bool defaultscdef(BWAPI::Unit u, std::shared_ptr<BaseManager> bm)
+{
+  return false;
+}
+
+bool fourpoolscdef(BWAPI::Unit u, std::shared_ptr<BaseManager> bm)
+{
+  if (u->getType() == BWAPI::UnitTypes::Zerg_Spawning_Pool)
+  {
+    if (!u->isCompleted() && u->getRemainingBuildTime() < 400 && bm->numWorkers() > 4)
+      return true;
+  }
+  return false;
+}
+
+bool fivepoolscdef(BWAPI::Unit u, std::shared_ptr<BaseManager> bm)
+{
+  if (u->getType() == BWAPI::UnitTypes::Zerg_Spawning_Pool)
+  {
+    if (!u->isCompleted() && u->getRemainingBuildTime() < 400 && bm->numWorkers() > 5)
+      return true;
+  }
+  return false;
+}
+
+bool ninepoolscdef(BWAPI::Unit u, std::shared_ptr<BaseManager> bm)
+{
+  if (u->getType() == BWAPI::UnitTypes::Zerg_Spawning_Pool)
+  {
+    if (!u->isCompleted() && u->getRemainingBuildTime() < 400 && bm->numWorkers() > 9)
+      return true;
+  }
+  return false;
+}

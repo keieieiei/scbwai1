@@ -56,6 +56,8 @@ private:
   int mineralReserve;
   BWAPI::Unit droneBetterBuildShitOrItsAFuckingMotherfucker;
 
+  // temp add; should probably restructure a bit for buildorders if we keep the dynamic scout condition function method
+  BuildOrder activeBuild;
 public:
   BuildExecutor(BuildOrder bo);
   ~BuildExecutor();
@@ -63,6 +65,8 @@ public:
   void update();
   bool containsLarva(BWAPI::Unit u);
   void addLarva(BWAPI::Unit u);
+  // temp add; should probably restructure a bit for buildorders if we keep the dynamic scout condition function method
+  BuildOrder getBuildOrder();
 
   // TODO: Temporary way to set mainManager pointer
   void giveMainManager(const std::shared_ptr<BaseManager> &mm);

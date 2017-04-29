@@ -108,7 +108,32 @@ void ExampleAIModule::onStart()
   // causing build issues for some reason w/o if != nullptr
   if (m != nullptr) mainManager = std::make_shared<BaseManager>(BaseManager(m));
 
-  buildExecutor = std::make_shared<BuildExecutor>(BuildExecutor(BuildOrder::FIVEPOOL));
+  char bo[9];
+  printf("Enter build order: ");
+  if (scanf_s("%8s", bo) == 1)
+    puts(bo);
+
+  if (strcmp(bo, "fivepool"))
+  {
+    printf("setting build order to %s\n", bo);
+    buildExecutor = std::make_shared<BuildExecutor>(BuildExecutor(BuildOrder::FIVEPOOL));
+  }
+  else if (strcmp(bo, "fourpool"))
+  {
+    printf("setting build order to %s\n", bo);
+    buildExecutor = std::make_shared<BuildExecutor>(BuildExecutor(BuildOrder::FOURPOOL));
+  }
+  else if (strcmp(bo, "ninepool"))
+  {
+    printf("setting build order to %s\n", bo);
+    buildExecutor = std::make_shared<BuildExecutor>(BuildExecutor(BuildOrder::NINEPOOL));
+  }
+  else
+  {
+    printf("setting build order to default fivepool, cause wtf did u write????\n");
+    buildExecutor = std::make_shared<BuildExecutor>(BuildExecutor(BuildOrder::FIVEPOOL));
+  }
+  //buildExecutor = std::make_shared<BuildExecutor>(BuildExecutor(BuildOrder::FIVEPOOL));
   buildExecutor->giveMainManager(mainManager);
 
   scoutManager = std::make_shared<ScoutManager>(ScoutManager());
@@ -380,14 +405,19 @@ void ExampleAIModule::onFrame()
       if (!scoutManager->containsUnit(u))
         scoutManager->addScout(u);
     }
-    else if (u->getType() == UnitTypes::Zerg_Spawning_Pool)
+    else if (scoutManager->getScoutConditionFunction(buildExecutor->getBuildOrder())(u, mainManager))
+    {
+      printf("took worker from dynamic scout condition function\n");
+      scoutManager->addScout(mainManager->takeWorker());
+    }
+    /*else if (u->getType() == UnitTypes::Zerg_Spawning_Pool)
     {
       // fuck this hack gonna cause problems as soon as we swap builds TODO FIX POTENTIAL ISSUE ALERT ALERT i'm too tired i just wanna finish this class and not have it crash pls
       if (!u->isCompleted() && u->getRemainingBuildTime() < 400 && mainManager->numWorkers() > 5)
         scoutManager->addScout(mainManager->takeWorker());
     }
     else if (u->getType().isResourceDepot()) // A resource depot is a Command Center, Nexus, or Hatchery
-    { /*
+    { 
       // Train Zerglings if we have a Spawning Pool with a 70% chance 
       if (hasPool && Broodwar->self()->minerals() >= UnitTypes::Zerg_Zergling.mineralPrice() + mineralBuffer && rand() % 10 > 2)
       {
@@ -416,8 +446,8 @@ void ExampleAIModule::onFrame()
           buildingOverlord = 48;
         }
       } // closure: failed to train idle unit
-      */
-    }
+      
+    }*/
   } // closure: unit iterator
 
   // clean up enemy list (should prolly move this later)

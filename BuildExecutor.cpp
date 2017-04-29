@@ -4,8 +4,8 @@ BuildExecutor::BuildExecutor(BuildOrder bo)
   : buildOrder(builds.at(bo))
   , mineralReserve{0}
   , droneBetterBuildShitOrItsAFuckingMotherfucker{nullptr}
+  , activeBuild(bo)
 {
-
 }
 
 BuildExecutor::~BuildExecutor()
@@ -71,6 +71,11 @@ bool BuildExecutor::containsLarva(BWAPI::Unit u)
 void BuildExecutor::addLarva(BWAPI::Unit u)
 {
   larvae.push_back(u);
+}
+
+BuildOrder BuildExecutor::getBuildOrder()
+{
+  return this->activeBuild;
 }
 
 void BuildExecutor::giveMainManager(const std::shared_ptr<BaseManager> &mm)

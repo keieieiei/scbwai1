@@ -1,7 +1,9 @@
 #include <BWAPI.h>
 #include <BWTA.h>
+#include "BaseManager.h"
 #include <memory>
 #include "OverlordHandler.h"
+#include "BuildExecutor.h"
 
 /*
   Explores the enemy base and forces
@@ -25,6 +27,14 @@
     Ability to trail and track high value units
 */
 
+// these really should be somewhere else more generic, i think, maybe
+typedef bool(*scdef) (BWAPI::Unit, std::shared_ptr<BaseManager>);
+bool fourpoolscdef(BWAPI::Unit u, std::shared_ptr<BaseManager> bm);
+bool fivepoolscdef(BWAPI::Unit u, std::shared_ptr<BaseManager> bm);
+bool ninepoolscdef(BWAPI::Unit u, std::shared_ptr<BaseManager> bm);
+bool defaultscdef(BWAPI::Unit u, std::shared_ptr<BaseManager> bm);
+
+
 class ScoutManager
 {
 private:
@@ -42,7 +52,8 @@ private:
   std::vector<BWAPI::Unit> drones;
   BWAPI::Position enemyMain;
   std::vector<BWAPI::Position> startingLocations;
-  bool mainExplored = false; // hacky
+  //hackityhack
+  bool mainExplored = false;
 public:
   ScoutManager();
   ~ScoutManager();
@@ -56,4 +67,5 @@ public:
   BWAPI::Position getFurthestStartingLocation();
   // hacky
   bool isMainExplored();
+  scdef getScoutConditionFunction(BuildOrder bo);
 };
