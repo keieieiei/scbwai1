@@ -1,27 +1,14 @@
 #pragma once
 #include <BWAPI.h>
-#include <BWTA.h>
+#include "UnitHandler.h"
 
-enum class Objective
+class ZerglingHandler: public UnitHandler
 {
-  ASSAULT,
-  DEFEND,
-  NONE,
-};
-
-class ZerglingHandler
-{
-private:
-  BWAPI::Position target;
-  Objective objective;
-
 public:
   ZerglingHandler(BWAPI::Unit u);
-  ~ZerglingHandler();
+  virtual ~ZerglingHandler();
 
-  BWAPI::Unit unit;
-  void update();
-  void attack(BWAPI::Position pos);
-  void defend(BWAPI::Position pos);
-
+  virtual void update();
+  virtual bool setObjective(Objective o, BWAPI::Position p);
+  // virtual bool setObjective(Objective o, BWAPI::Unit u); don't need this yet ... will we ever?
 };

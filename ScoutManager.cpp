@@ -57,7 +57,7 @@ void ScoutManager::findEnemyBase()
     {
       for (auto u : overlords)
       {
-        overlords.back()->revealTile(b->getPosition());
+        overlords.back()->setObjective(Objective::REVEAL_TILE, b->getPosition());
       }
       continue;
     }
@@ -95,7 +95,7 @@ void ScoutManager::addScout(BWAPI::Unit u)
   {
     printf("addy overlord\n");
     overlords.push_back(std::make_shared<OverlordHandler>(OverlordHandler(u)));
-    overlords.back()->revealTile(startingLocations[1]);
+    overlords.back()->setObjective(Objective::REVEAL_TILE, startingLocations[1]);
   }
 }
 

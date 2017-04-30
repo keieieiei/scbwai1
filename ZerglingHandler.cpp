@@ -1,9 +1,7 @@
 #include "ZerglingHandler.h"
 
 ZerglingHandler::ZerglingHandler(BWAPI::Unit u)
-  : unit{ u }
-  , target()
-  , objective{ Objective::NONE }
+  : UnitHandler(u)
 {
 
 }
@@ -34,8 +32,8 @@ void ZerglingHandler::update()
       if (unit->getTarget() != secondTarget)
         unit->attack(secondTarget);
     }
-    else if (unit->getOrderTargetPosition() != target)
-      unit->attack(target); // this does not work well when spammed
+    else if (unit->getOrderTargetPosition() != targetPos)
+      unit->attack(targetPos); // this does not work well when spammed
     break;
   }
   case Objective::DEFEND:
@@ -52,8 +50,8 @@ void ZerglingHandler::update()
       if (unit->getTarget() != secondTarget)
         unit->attack(secondTarget);
     }
-    else if (unit->getOrderTargetPosition() != target)
-      unit->move(target); // this does not work well when spammed
+    else if (unit->getOrderTargetPosition() != targetPos)
+      unit->move(targetPos); // this does not work well when spammed
     break;
   }
   case Objective::NONE:
@@ -61,14 +59,11 @@ void ZerglingHandler::update()
   }
 }
 
-void ZerglingHandler::attack(BWAPI::Position pos)
+bool ZerglingHandler::setObjective(Objective o, BWAPI::Position pos)
 {
-  target = pos;
-  objective = Objective::ASSAULT;
-}
-
-void ZerglingHandler::defend(BWAPI::Position pos)
-{
-  target = pos;
-  objective = Objective::DEFEND;
+  // only handles attacker type objectives for now
+  if (o >= Objective::ASSAULT && o <= Objective::DEFEND)
+    return UnitHandler::setObjective(o, pos);
+  
+  return false;
 }

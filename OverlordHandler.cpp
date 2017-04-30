@@ -1,8 +1,7 @@
 #include "OverlordHandler.h"
 
 OverlordHandler::OverlordHandler(BWAPI::Unit u)
-  : unit{ u }
-  , objective{ ScoutObjective::NONE }
+  : UnitHandler(u)
 {
 
 }
@@ -16,15 +15,18 @@ void OverlordHandler::update()
 {
   switch (objective)
   {
-  case ScoutObjective::REVEAL_TILE:
-    if (unit->getOrderTargetPosition() != targetPosition)
-      unit->move(targetPosition);
+  case Objective::REVEAL_TILE:
+    if (unit->getOrderTargetPosition() != targetPos)
+      unit->move(targetPos);
     break;
   }
 }
 
-void OverlordHandler::revealTile(BWAPI::Position tp)
+bool OverlordHandler::setObjective(Objective o, BWAPI::Position p)
 {
-  targetPosition = tp;
-  objective = ScoutObjective::REVEAL_TILE;
+  // only handles scouting objectives for now
+  if (o >= Objective::REVEAL_TILE && o <= Objective::TRACK_UNIT)
+    return UnitHandler::setObjective(o, p);
+  
+  return false;
 }

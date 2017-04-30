@@ -1,31 +1,16 @@
 #include <BWAPI.h>
+#include "UnitHandler.h"
 
 /*
   Used as a scout, a transport, a detector, and maybe even as a meatshield.
 */
 
-enum class ScoutObjective
+class OverlordHandler: public UnitHandler
 {
-  REVEAL_TILE,
-  WATCH_TILE,
-  SPREAD_VISION,
-  EXPLORE_BASE,
-  TRACK_UNIT,
-  NONE,
-};
-
-class OverlordHandler
-{
-private:
-  BWAPI::Position targetPosition;
-  ScoutObjective objective;
-
 public:
   OverlordHandler(BWAPI::Unit u);
-  ~OverlordHandler();
+  virtual ~OverlordHandler();
 
-  BWAPI::Unit unit;
-
-  void update();
-  void revealTile(BWAPI::Position tp);
+  virtual void update();
+  virtual bool setObjective(Objective o, BWAPI::Position p);
 };

@@ -255,16 +255,16 @@ void ExampleAIModule::onFrame()
         if (!InfoManager::Instance().getEnemyBuildings().empty())
         {
           //Broodwar->sendText("attack %s @ %d, %d", InfoManager::Instance().getEnemyBuildings().at(0).getType().c_str(), InfoManager::Instance().getEnemyBuildings().at(0).getPosition().x, InfoManager::Instance().getEnemyBuildings().at(0).getPosition().y);
-          unit.second->attack(InfoManager::Instance().getEnemyBuildings().at(0).getPosition());
+          unit.second->setObjective(Objective::ASSAULT, InfoManager::Instance().getEnemyBuildings().at(0).getPosition());
         }
         else if (!BWAPI::Broodwar->isExplored(BWAPI::TilePosition(scoutManager->getFurthestStartingLocation())))
         {
-          unit.second->attack(scoutManager->getFurthestStartingLocation());
+          unit.second->setObjective(Objective::ASSAULT, scoutManager->getFurthestStartingLocation());
         }
 
     }
     else
-      unit.second->defend(mainManager->main->getPosition());
+      unit.second->setObjective(Objective::DEFEND, mainManager->main->getPosition());
 
     // update units
     unit.second->update();

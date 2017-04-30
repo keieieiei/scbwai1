@@ -40,7 +40,7 @@ class ScoutManager
 private:
   struct Task
   {
-    ScoutObjective objective;
+    Objective objective;
     BWAPI::Position position;
     std::weak_ptr<OverlordHandler> agent; // should be ScoutHandler
   };
