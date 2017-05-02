@@ -87,6 +87,7 @@ void ScoutManager::addScout(BWAPI::Unit u)
   printf("addy addy\n");
   if (u->getType() == BWAPI::UnitTypes::Zerg_Drone)
   {
+    printf("addy drone\n");
     drones.push_back(u);
     if (startingLocations.size() > 2)
       u->move(startingLocations[2]);

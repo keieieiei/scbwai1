@@ -28,7 +28,7 @@ std::shared_ptr<ScoutManager> scoutManager;
 int reserve = 9000;
 
 // TODO:  should be std::shared_ptr<UnitHandler> in the future but i'm too lazy to implement that inheritance yet
-static std::unordered_map<Unit, std::shared_ptr<ZerglingHandler>> unitLookup;
+static std::unordered_map<Unit, std::shared_ptr<UnitHandler>> unitLookup;
 
 // build order input
 bool manualBO = false;
@@ -266,9 +266,12 @@ void ExampleAIModule::onFrame()
     if (unit.second->unit->isLoaded() || !unit.second->unit->isPowered() || unit.second->unit->isStuck())
       continue;
 
-    // spoof implementation of a squad
-    if (Broodwar->self()->allUnitCount(UnitTypes::Zerg_Zergling) > 1)
+    // zergling stuff
+    if (unit.second->unit->getType() == BWAPI::UnitTypes::Zerg_Zergling)
     {
+      // spoof implementation of a squad
+      if (Broodwar->self()->allUnitCount(UnitTypes::Zerg_Zergling) > 1)
+      {
         // added ad hoc way to have the units keep attacking (there's some sort of weird bug where they stop attacking even tho
         // there are still discovered enemy buildings at a base)
         if (!InfoManager::Instance().getEnemyBuildings().empty())
@@ -281,9 +284,20 @@ void ExampleAIModule::onFrame()
           unit.second->setObjective(Objective::ASSAULT, scoutManager->getFurthestStartingLocation());
         }
 
+      }
+      else
+        unit.second->setObjective(Objective::DEFEND, mainManager->main->getPosition());
     }
-    else
-      unit.second->setObjective(Objective::DEFEND, mainManager->main->getPosition());
+
+    // drone stuff
+    else if (unit.second->unit->getType() == BWAPI::UnitTypes::Zerg_Drone)
+    {
+      // if our worker is gathering or idle but doesn't belong to mainManager
+      if (!mainManager->containsWorker(unit.second->unit) && (unit.second->unit->isIdle() || unit.second->unit->isGatheringMinerals() || unit.second->unit->isGatheringGas()))
+      {
+        mainManager->addWorker(unit.second, mainManager);
+      }
+    }
 
     // update units
     unit.second->update();
@@ -408,10 +422,9 @@ void ExampleAIModule::onFrame()
     // If the unit is a worker unit **but not the reserve!
     else if (u->getType().isWorker() && u->getID() != reserve)
     {
-      // if our worker is gathering or idle but doesn't belong to mainManager
-      if (!mainManager->containsWorker(u) && (u->isIdle() || u->isGatheringMinerals() || u->isGatheringGas()))
+      if (unitLookup.count(u) == 0)
       {
-        mainManager->addWorker(u);
+        unitLookup[u] = std::make_shared<DroneHandler>(DroneHandler(u));
       }
     }
     else if (u->getType() == UnitTypes::Zerg_Larva)

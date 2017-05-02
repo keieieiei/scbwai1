@@ -31,3 +31,10 @@ bool UnitHandler::setObjective(Objective o, BWAPI::Unit u)
 
   return true;
 }
+
+void UnitHandler::resetObjective()
+{
+  targetUnit = nullptr;
+  targetPos = { -1, -1 };
+  objective = Objective::NONE;
+}

@@ -14,6 +14,10 @@ enum class Objective
   EXPLORE_BASE,
   TRACK_UNIT,
 
+  // Worker 7 -> 8 inclusive
+  GATHER_MINERALS,
+  GATHER_GAS,
+
   // Default 7
   NONE,
 };
@@ -32,6 +36,12 @@ public:
   virtual void update() = 0;
   virtual bool setObjective(Objective o, BWAPI::Position p);
   virtual bool setObjective(Objective o, BWAPI::Unit u);
+  virtual void resetObjective();
 
   const BWAPI::Unit unit;
+
+  bool operator ==(const UnitHandler &other) const
+  {
+    return this->unit == other.unit;
+  }
 };

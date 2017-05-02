@@ -26,21 +26,28 @@ void BaseManager::update()
   // Remove minerals that don't exist
   minerals.erase(std::remove_if(std::begin(minerals), std::end(minerals), [](const std::shared_ptr<Mineral> &m){ return !m->unit->exists(); }), std::end(minerals));
 
+  // Remove worker pointers that expired
+  drones.erase(std::remove_if(std::begin(drones), std::end(drones), [](const std::weak_ptr<DroneHandler> &d){ return d.expired(); }), std::end(drones));
+
   // check for workers that lost their minerals to the previous statement
   //  then check for workers that don't exist and update their mineral if they contribute to a mineral count
   // Note: this might be an invariant that says we should implement mineral as a class
-  for (auto &worker : workers)
+  for (auto &drone : drones)
   {
-    // Check for removed mineral and return the workers from it to a default state
-    if (worker.state != Worker::DEFAULT && worker.resource.expired())
-      worker.state = Worker::DEFAULT;
     // Update worker if they're about to get removed and contribute to a mineral's count
-    if (!worker.unit->exists() && (worker.state == Worker::MOVING_TO_GATHER || worker.state == Worker::AT_GATHER_POINT))
-      --worker.resource.lock()->numWorkers;
+    if (!drone.lock()->unit->exists() && (drone.lock()->getGatherState() == GatherState::MOVE_TO_MINERALS || drone.lock()->getGatherState() == GatherState::WAIT_FOR_MINERALS))
+      for (auto &mineral : minerals)
+        if (mineral->unit == drone.lock()->getTargetUnit())
+        {
+          if (mineral->numWorkers > 0)
+            --mineral->numWorkers;
+
+          continue;
+        }
   }
 
   // Remove workers that don't exist
-  workers.erase(std::remove_if(std::begin(workers), std::end(workers), [](const Worker &w){ return !w.unit->exists(); }), std::end(workers));
+  drones.erase(std::remove_if(std::begin(drones), std::end(drones), [](const std::weak_ptr<DroneHandler> &d){ return !d.lock()->unit->exists(); }), std::end(drones));
 
   // Check if we've completely run out of minerals or don't have a hatchery (prevents some bad pointer calls)
   // TODO: fully implement this
@@ -56,11 +63,12 @@ void BaseManager::update()
 
 
   // Manage Workers
-  for (Worker &worker : workers)
+  for (const auto &drone : drones)
   {
     // DEBUG
-    BWAPI::Broodwar->drawTextMap(worker.unit->getPosition(), "%d", worker.state);
+    BWAPI::Broodwar->drawTextMap(drone.lock()->unit->getPosition(), "%d", drone.lock()->getGatherState());
 
+    /*
     switch (worker.state)
     {
     case Worker::MOVING_TO_GATHER:
@@ -131,44 +139,120 @@ void BaseManager::update()
       break;
 
     }
+    */
   }
 }
 
 int BaseManager::numWorkers()
 {
-  return workers.size();
+  return drones.size();
 }
 
 bool BaseManager::containsWorker(BWAPI::Unit unit)
 {
-  for (const auto &worker : workers)
-    if (worker.unit == unit)
+  for (const auto &drone : drones)
+    if (drone.lock()->unit == unit)
       return true;
 
   return false;
 }
 
-void BaseManager::addWorker(BWAPI::Unit unit)
+void BaseManager::addWorker(std::shared_ptr<UnitHandler> dh, std::shared_ptr<BaseManager> bm)
 {
-  workers.push_back({ unit, std::weak_ptr<Mineral>(), Worker::DEFAULT });
+  drones.push_back(std::dynamic_pointer_cast<DroneHandler>(dh));
+  // set the drone's baseManager somewhere here...
+  drones.back().lock()->giveBaseManager(bm);
+  drones.back().lock()->setObjective(Objective::GATHER_MINERALS, nullptr);
 }
 
 BWAPI::Unit BaseManager::takeWorker()
 {
-  printf("takeworker worker size %d", workers.size());
-  if (workers.size() < 1)
+  printf("takeworker worker size %d", drones.size());
+  if (drones.size() < 1)
     return nullptr;
 
-  // Sort in reverse order of WorkerState value: RETURNING_RESOURCE, AT_GATHER_POINT, MOVING_TO_GATHER, DEFAULT
-  std::sort(std::begin(workers), std::end(workers), [](const Worker &a, const Worker &b) { return a.state > b.state; });
+  // Sort in reverse order of GatherState value: RETURNING_MINERALS, WAIT_FOR_MINERALS, MOVE_TO_MINERALS, DEFAULT
+  std::sort(std::begin(drones), std::end(drones), [](const std::weak_ptr<DroneHandler> &a, const std::weak_ptr<DroneHandler> &b) { return a.lock()->getGatherState() > b.lock()->getGatherState(); });
 
   // Return the last element (hopefully DEFAULT or MOVING_TO_GATHER)
-  if (workers.back().state == Worker::MOVING_TO_GATHER || workers.back().state == Worker::AT_GATHER_POINT)
-    --workers.back().resource.lock()->numWorkers;
+  if (drones.back().lock()->getGatherState() == GatherState::MOVE_TO_MINERALS || drones.back().lock()->getGatherState() == GatherState::WAIT_FOR_MINERALS)
+    for (auto &mineral : minerals)
+      if (mineral->unit == drones.back().lock()->getTargetUnit())
+      {
+        if (mineral->numWorkers > 0)
+          --mineral->numWorkers;
 
-  BWAPI::Unit unit = workers.back().unit;
-  workers.pop_back();
+        continue;
+      }
+
+  BWAPI::Unit unit = drones.back().lock()->unit;
+  drones.back().lock()->resetObjective();
+  drones.pop_back();
   return unit;
+}
+
+void BaseManager::finishGathering(BWAPI::Unit u)
+{
+  for (auto &mineral : minerals)
+    if (mineral->unit == u)
+    {
+      mineral->initialGatherFrame = BWAPI::Broodwar->getFrameCount();
+      if (mineral->numWorkers > 0)
+        --mineral->numWorkers;
+
+      continue;
+    }
+}
+
+BWAPI::Unit BaseManager::requestMineralAssignment(BWAPI::Position pos)
+{
+  int minFrames = std::numeric_limits<int>::max();
+  BWAPI::Unit returnMineral = nullptr;
+  for (const auto &mineral : minerals)
+  {
+    int totalFrames = 0;
+
+    // lookup how many frames it will take us to get to the patch
+    int distance = mineral->unit->getDistance(pos);
+    if (distance <= moveDistanceMax)
+      totalFrames += moveToMineralFrames.at(distance);
+    else
+      totalFrames += static_cast<int>(static_cast<double>(distance) / moveDistanceMax * moveToMineralFrames.at(moveDistanceMax));
+
+    // if the number of frames until we can start gathering is longer than frame to get to the patch
+    //  then we'll just use that instead
+    if (mineral->numWorkers > 0)
+    {
+      int waitFrames = mineral->numWorkers * gatherFrames - (BWAPI::Broodwar->getFrameCount() - mineral->initialGatherFrame);
+      totalFrames = (totalFrames > waitFrames) ? totalFrames : waitFrames;
+    }
+
+    // Re-use distance
+    distance = main->getDistance(mineral->unit->getPosition());
+    // add the number of frames it will take us to return to the hatchery with our goods
+    if (distance >= returnDistanceMin && distance <= returnDistanceMax)
+      totalFrames += returnToMainFrames.at(distance);
+    else if (distance > returnDistanceMax)
+      totalFrames += static_cast<int>(static_cast<double>(distance) / returnDistanceMax * returnToMainFrames.at(returnDistanceMax));
+    else // shouldn't happen in normal maps
+      totalFrames += returnToMainFrames.at(returnDistanceMin);
+
+    // swap to this Mineral if its better
+    if (totalFrames < minFrames)
+    {
+      minFrames = totalFrames;
+      returnMineral = mineral->unit;
+    }
+  }
+
+  for (auto &mineral : minerals)
+    if (mineral->unit == returnMineral)
+    {
+      ++mineral->numWorkers;
+      continue;
+    }
+
+  return returnMineral;
 }
 
 const int BaseManager::gatherFrames = 80;

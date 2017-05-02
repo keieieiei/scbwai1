@@ -1,6 +1,9 @@
 #pragma once
 #include <BWAPI.h>
 #include <memory>
+#include "DroneHandler.h"
+
+class DroneHandler;
 
 class BaseManager
 {
@@ -19,6 +22,7 @@ private:
     int initialGatherFrame;
   };
 
+  /* Deprecated
   struct Worker
   {
     enum WorkerState
@@ -33,8 +37,9 @@ private:
     std::weak_ptr<Mineral> resource;
     WorkerState state;
   };
+  */
 
-  std::vector<Worker> workers;
+  std::vector<std::weak_ptr<DroneHandler>> drones;
   std::vector<std::shared_ptr<Mineral>> minerals;
 
 public:
@@ -46,6 +51,9 @@ public:
   void update();
   int  numWorkers();
   bool containsWorker(BWAPI::Unit unit);
-  void addWorker(BWAPI::Unit unit);
+  void addWorker(std::shared_ptr<UnitHandler> dh, std::shared_ptr<BaseManager> bm);
   BWAPI::Unit takeWorker();
+
+  void finishGathering(BWAPI::Unit u);
+  BWAPI::Unit requestMineralAssignment(BWAPI::Position pos);
 };
