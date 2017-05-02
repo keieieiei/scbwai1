@@ -1,6 +1,9 @@
 #include "ExampleAIModule.h"
 #include <iostream>
 
+//because VS is a jerk.
+#pragma comment(lib, "user32.lib")
+
 using namespace BWAPI;
 using namespace Filter;
 
@@ -32,6 +35,9 @@ bool manualBO = false;
 
 void ExampleAIModule::onStart()
 {
+  // sloppy way of grabbing the game window
+  HWND gameWindow = GetForegroundWindow();
+
   // open a console for printing debug msgs
   FILE *df;
   AllocConsole();
@@ -39,6 +45,8 @@ void ExampleAIModule::onStart()
   freopen_s(&df, "conout$", "w", stdout);
   freopen_s(&df, "conout$", "w", stderr);
   printf("Debugging Window:\n");
+  // force focus on game window (might be a way to do without grabbing game window, but meh.)
+  SetForegroundWindow(gameWindow);
 
   // get player id
   InfoManager::Instance().setPlayerID(Broodwar->self()->getID());
@@ -113,6 +121,7 @@ void ExampleAIModule::onStart()
 
   if (manualBO) {
     char bo[9];
+    SetForegroundWindow(GetConsoleWindow());
     printf("Enter build order: ");
     if (scanf_s("%8s", bo) == 1)
       puts(bo);
@@ -137,6 +146,7 @@ void ExampleAIModule::onStart()
       printf("setting build order to default fivepool, cause wtf did u write????\n");
       buildExecutor = std::make_shared<BuildExecutor>(BuildExecutor(BuildOrder::FIVEPOOL));
     }
+    SetForegroundWindow(gameWindow);
   }
   else
   {
