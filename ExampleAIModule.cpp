@@ -27,6 +27,9 @@ int reserve = 9000;
 // TODO:  should be std::shared_ptr<UnitHandler> in the future but i'm too lazy to implement that inheritance yet
 static std::unordered_map<Unit, std::shared_ptr<ZerglingHandler>> unitLookup;
 
+// build order input
+bool manualBO = false;
+
 void ExampleAIModule::onStart()
 {
   // open a console for printing debug msgs
@@ -108,32 +111,38 @@ void ExampleAIModule::onStart()
   // causing build issues for some reason w/o if != nullptr
   if (m != nullptr) mainManager = std::make_shared<BaseManager>(BaseManager(m));
 
-  char bo[9];
-  printf("Enter build order: ");
-  if (scanf_s("%8s", bo) == 1)
-    puts(bo);
+  if (manualBO) {
+    char bo[9];
+    printf("Enter build order: ");
+    if (scanf_s("%8s", bo) == 1)
+      puts(bo);
 
-  if (strcmp(bo,"fivepool") == 0)
-  {
-    printf("setting build order to FIVEPOOL\n");
-    buildExecutor = std::make_shared<BuildExecutor>(BuildExecutor(BuildOrder::FIVEPOOL));
-  }
-  else if (strcmp(bo, "fourpool") == 0)
-  {
-    printf("setting build order to FOURPOOL\n", bo);
-    buildExecutor = std::make_shared<BuildExecutor>(BuildExecutor(BuildOrder::FOURPOOL));
-  }
-  else if (strcmp(bo, "ninepool") == 0)
-  {
-    printf("setting build order to NINEPOOL\n", bo);
-    buildExecutor = std::make_shared<BuildExecutor>(BuildExecutor(BuildOrder::NINEPOOL));
+    if (strcmp(bo,"fivepool") == 0)
+    {
+      printf("setting build order to FIVEPOOL\n");
+      buildExecutor = std::make_shared<BuildExecutor>(BuildExecutor(BuildOrder::FIVEPOOL));
+    }
+    else if (strcmp(bo, "fourpool") == 0)
+    {
+      printf("setting build order to FOURPOOL\n", bo);
+      buildExecutor = std::make_shared<BuildExecutor>(BuildExecutor(BuildOrder::FOURPOOL));
+    }
+    else if (strcmp(bo, "ninepool") == 0)
+    {
+      printf("setting build order to NINEPOOL\n", bo);
+      buildExecutor = std::make_shared<BuildExecutor>(BuildExecutor(BuildOrder::NINEPOOL));
+    }
+    else
+    {
+      printf("setting build order to default fivepool, cause wtf did u write????\n");
+      buildExecutor = std::make_shared<BuildExecutor>(BuildExecutor(BuildOrder::FIVEPOOL));
+    }
   }
   else
   {
-    printf("setting build order to default fivepool, cause wtf did u write????\n");
     buildExecutor = std::make_shared<BuildExecutor>(BuildExecutor(BuildOrder::FIVEPOOL));
   }
-  //buildExecutor = std::make_shared<BuildExecutor>(BuildExecutor(BuildOrder::FIVEPOOL));
+  
   buildExecutor->giveMainManager(mainManager);
 
   scoutManager = std::make_shared<ScoutManager>(ScoutManager());
@@ -414,7 +423,7 @@ void ExampleAIModule::onFrame()
     {
       // fuck this hack gonna cause problems as soon as we swap builds TODO FIX POTENTIAL ISSUE ALERT ALERT i'm too tired i just wanna finish this class and not have it crash pls
       //if (!u->isCompleted() && u->getRemainingBuildTime() < 400 && mainManager->numWorkers() > 5)
-      if (!u->isCompleted() && u->getRemainingBuildTime() < 400 && scoutManager->numDrones() == 0 && scoutManager->isMainFound())
+      if (!u->isCompleted() && u->getRemainingBuildTime() < 400 && scoutManager->numDrones() == 0 && !scoutManager->isMainFound())
         scoutManager->addScout(mainManager->takeWorker());
     }/*
     else if (u->getType().isResourceDepot()) // A resource depot is a Command Center, Nexus, or Hatchery
