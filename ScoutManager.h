@@ -27,13 +27,14 @@
     Ability to trail and track high value units
 */
 
+/* dynamic scout condition functions - obsolete
 // these really should be somewhere else more generic, i think, maybe
 typedef bool(*scdef) (BWAPI::Unit, std::shared_ptr<BaseManager>);
 bool fourpoolscdef(BWAPI::Unit u, std::shared_ptr<BaseManager> bm);
 bool fivepoolscdef(BWAPI::Unit u, std::shared_ptr<BaseManager> bm);
 bool ninepoolscdef(BWAPI::Unit u, std::shared_ptr<BaseManager> bm);
 bool defaultscdef(BWAPI::Unit u, std::shared_ptr<BaseManager> bm);
-
+*/
 
 class ScoutManager
 {
@@ -69,5 +70,8 @@ public:
   bool isMainExplored();
   bool isMainFound();
   int numDrones();
+  /*
+  // dynamic scout condition functions - obsolete
   scdef getScoutConditionFunction(BuildOrder bo);
+  */
 };

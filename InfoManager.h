@@ -13,10 +13,12 @@ private:
   std::vector<UnitInfo> enemyUnitsInfo;
   std::vector<BWAPI::UnitType> enemyUnitTypes;
 
+  // variables to hold the objects of the player we are currently working on
   const char* currPlayer;
   std::vector<UnitInfo> *currUnits;
   std::vector<BWAPI::UnitType> *currTypes;
 
+  // methods to set the objects of the player we are currently working on 
   void setCurrentVar(const char* s);
   void setCurrentVar(BWAPI::Unit u);
 

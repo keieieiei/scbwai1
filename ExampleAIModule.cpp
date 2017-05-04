@@ -119,6 +119,7 @@ void ExampleAIModule::onStart()
   // causing build issues for some reason w/o if != nullptr
   if (m != nullptr) mainManager = std::make_shared<BaseManager>(BaseManager(m));
 
+  // prompt the user to manually input the build order
   if (manualBO) {
     char bo[9];
     SetForegroundWindow(GetConsoleWindow());
@@ -148,6 +149,7 @@ void ExampleAIModule::onStart()
     }
     SetForegroundWindow(gameWindow);
   }
+  // if manual BO turned off, just set BO to FIVEPOOL for now
   else
   {
     buildExecutor = std::make_shared<BuildExecutor>(BuildExecutor(BuildOrder::FIVEPOOL));
@@ -308,6 +310,7 @@ void ExampleAIModule::onFrame()
   if (Broodwar->getFrameCount() % Broodwar->getLatencyFrames() != 0)
     return;
 
+  /*
   // hack way of stopping anything else from being produced until we get a 9 pool
   // supply is 2x actual supply; we're going for 9pool
   if (Broodwar->self()->supplyUsed() >= 18 && !hasPool && buildingPool < 200)
@@ -317,7 +320,7 @@ void ExampleAIModule::onFrame()
   else
   {
     mineralBuffer = 0;
-  }
+  }*/
   // Pool Building Code; frame delay if it fails to build
   // TESTING : remove the if true and make 2nd else if an if to undo
   /*
@@ -370,7 +373,7 @@ void ExampleAIModule::onFrame()
     //if ( !u->isCompleted() || u->isConstructing() )
     //  continue;
 
-    // TESTING: reserve a unit
+    // FOR TESTING: reserve a unit
     if (reserve == 0 && u->getType().isWorker())
     {
       reserve = u->getID();
@@ -444,7 +447,7 @@ void ExampleAIModule::onFrame()
     }*/
     else if (u->getType() == UnitTypes::Zerg_Spawning_Pool)
     {
-      // fuck this hack gonna cause problems as soon as we swap builds TODO FIX POTENTIAL ISSUE ALERT ALERT i'm too tired i just wanna finish this class and not have it crash pls
+      // fixed - fuck this hack gonna cause problems as soon as we swap builds TODO FIX POTENTIAL ISSUE ALERT ALERT i'm too tired i just wanna finish this class and not have it crash pls
       //if (!u->isCompleted() && u->getRemainingBuildTime() < 400 && mainManager->numWorkers() > 5)
       if (!u->isCompleted() && u->getRemainingBuildTime() < 400 && scoutManager->numDrones() == 0 && !scoutManager->isMainFound())
         scoutManager->addScout(mainManager->takeWorker());
@@ -624,7 +627,7 @@ void ExampleAIModule::onUnitDestroy(BWAPI::Unit unit)
     Broodwar->sendText("Enemy %s has perished.", unit->getType().c_str());
   }
 
-  // remove unit type from  unit list if population hits 0
+  // remove unit from info manager unit list
   if (!unit->getPlayer()->isNeutral()) InfoManager::Instance().removeUnitInfo(unit);
 
   // reset reserve if it's killed

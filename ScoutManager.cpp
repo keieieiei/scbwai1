@@ -130,6 +130,7 @@ int ScoutManager::numDrones()
   return drones.size();
 }
 
+/* dynamic scout condition functions - obsolete
 scdef ScoutManager::getScoutConditionFunction(BuildOrder bo)
 {
   switch (bo)
@@ -179,3 +180,4 @@ bool ninepoolscdef(BWAPI::Unit u, std::shared_ptr<BaseManager> bm)
   }
   return false;
 }
+*/
