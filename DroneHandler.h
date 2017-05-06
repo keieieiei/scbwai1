@@ -13,6 +13,7 @@ enum class GatherState
   WAIT_FOR_MINERALS,
   MINING_MINERALS, // i guess this is unused
   RETURN_MINERALS,
+  GAS, // just for BaseManager takeWorker
 };
 
 class DroneHandler : public UnitHandler

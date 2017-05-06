@@ -2,6 +2,7 @@
 
 BaseManager::BaseManager(const BWAPI::Unit unit)
   : main{ unit }
+  , vespene{ nullptr }
 {
   // Find and add surrounding resources
   // TODO: use BWTA ?
@@ -13,7 +14,7 @@ BaseManager::BaseManager(const BWAPI::Unit unit)
     }
     else if (u->getType() == BWAPI::UnitTypes::Resource_Vespene_Geyser)
     {
-      // TODO:  add vespene
+      vespene = u;
     }
     // TODO: what if u->getType().isRefinery()
   }
@@ -23,6 +24,22 @@ BaseManager::~BaseManager() {}
 
 void BaseManager::update()
 {
+  // check if we have to refresh our vespene pointer
+  // and mark it as run out if it has
+  // nullptr means if vespene never existed or ran out.
+  if (vespene != nullptr)
+  {
+    if (!vespene->exists())
+    {
+      for (const auto u : main->getUnitsInRadius(256, BWAPI::Filter::IsResourceContainer)) // TODO: check if this includes Refineries
+        if (u->getType() == BWAPI::UnitTypes::Resource_Vespene_Geyser)
+          vespene = u;
+    }
+    else // vespene->exists()
+      if (vespene->getResources() == 0)
+        vespene = nullptr;     
+  }
+
   // Remove minerals that don't exist
   minerals.erase(std::remove_if(std::begin(minerals), std::end(minerals), [](const std::shared_ptr<Mineral> &m){ return !m->unit->exists(); }), std::end(minerals));
 
@@ -160,7 +177,6 @@ bool BaseManager::containsWorker(BWAPI::Unit unit)
 void BaseManager::addWorker(std::shared_ptr<UnitHandler> dh, std::shared_ptr<BaseManager> bm)
 {
   drones.push_back(std::dynamic_pointer_cast<DroneHandler>(dh));
-  // set the drone's baseManager somewhere here...
   drones.back().lock()->giveBaseManager(bm);
   drones.back().lock()->setObjective(Objective::GATHER_MINERALS, nullptr);
 }
@@ -171,7 +187,7 @@ BWAPI::Unit BaseManager::takeWorker()
   if (drones.size() < 1)
     return nullptr;
 
-  // Sort in reverse order of GatherState value: RETURNING_MINERALS, WAIT_FOR_MINERALS, MOVE_TO_MINERALS, DEFAULT
+  // Sort in reverse order of GatherState value: GAS, RETURNING_MINERALS, WAIT_FOR_MINERALS, MOVE_TO_MINERALS, DEFAULT
   std::sort(std::begin(drones), std::end(drones), [](const std::weak_ptr<DroneHandler> &a, const std::weak_ptr<DroneHandler> &b) { return a.lock()->getGatherState() > b.lock()->getGatherState(); });
 
   // Return the last element (hopefully DEFAULT or MOVING_TO_GATHER)
@@ -206,6 +222,22 @@ void BaseManager::finishGathering(BWAPI::Unit u)
 
 BWAPI::Unit BaseManager::requestMineralAssignment(BWAPI::Position pos)
 {
+  // TODO:  more robust way to set / choose gas gathering
+  // set target as vespene if we have a vespene up and 2 or less gatherers
+  //  .... the dronehandler will change the objective... fuck... this is messy
+  if (vespene != nullptr)
+    if (vespene->exists() && vespene->isCompleted() && vespene->getType() == BWAPI::UnitTypes::Zerg_Extractor && vespene->getPlayer() == BWAPI::Broodwar->self())
+    {
+      int numGasGatherers = 0;
+      for (const auto &drone : drones)
+        if (!drone.expired())
+          if (drone.lock()->getObjective() == Objective::GATHER_GAS)
+            ++numGasGatherers;
+
+      if (numGasGatherers < 3)
+        return vespene;
+    }
+
   int minFrames = std::numeric_limits<int>::max();
   BWAPI::Unit returnMineral = nullptr;
   for (const auto &mineral : minerals)

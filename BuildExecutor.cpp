@@ -18,6 +18,7 @@ void BuildExecutor::update()
   if (buildOrder.empty())
     return;
 
+  // TODO:  make sure sure sure it works for Extractor where the unit is destroyed
   if (droneBetterBuildShitOrItsAFuckingMotherfucker != nullptr)
     if (droneBetterBuildShitOrItsAFuckingMotherfucker->getType() != BWAPI::UnitTypes::Zerg_Drone)
     {
@@ -125,6 +126,26 @@ const std::unordered_map<BuildOrder, std::queue<BWAPI::UnitType>> BuildExecutor:
       BWAPI::UnitTypes::Zerg_Overlord,      // 9 Overlord
       BWAPI::UnitTypes::Zerg_Drone,         // 9 Drone
       BWAPI::UnitTypes::Zerg_Zergling       // 10 Lings -> infinity
+    })
+  },
+
+  {
+    BuildOrder::NINEPOOLSPEED,
+    std::queue<BWAPI::UnitType>
+    ({
+      BWAPI::UnitTypes::Zerg_Drone,         // 4 Drone
+      BWAPI::UnitTypes::Zerg_Drone,         // 5 Drone
+      BWAPI::UnitTypes::Zerg_Drone,         // 6 Drone
+      BWAPI::UnitTypes::Zerg_Drone,         // 7 Drone
+      BWAPI::UnitTypes::Zerg_Drone,         // 8 Drone
+      BWAPI::UnitTypes::Zerg_Spawning_Pool, // 9 Pool
+      BWAPI::UnitTypes::Zerg_Drone,         // 8 Drone
+      BWAPI::UnitTypes::Zerg_Extractor,     // 9 Extractor
+      BWAPI::UnitTypes::Zerg_Overlord,      // 8 Overlord
+      BWAPI::UnitTypes::Zerg_Drone,         // 8 Drone
+      BWAPI::UnitTypes::Zerg_Zergling,      // 9 Lings -> infinity
+      BWAPI::UnitTypes::Zerg_Zergling,      // 9 Lings -> infinity
+      BWAPI::UnitTypes::Zerg_Zergling,      // 9 Lings -> infinity
     })
   }
 };

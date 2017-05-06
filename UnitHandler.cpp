@@ -38,3 +38,8 @@ void UnitHandler::resetObjective()
   targetPos = { -1, -1 };
   objective = Objective::NONE;
 }
+
+Objective UnitHandler::getObjective()
+{
+  return objective;
+}

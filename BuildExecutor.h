@@ -40,6 +40,7 @@ enum class BuildOrder
   FOURPOOL,
   FIVEPOOL,
   NINEPOOL,
+  NINEPOOLSPEED,
 };
 
 class BuildExecutor

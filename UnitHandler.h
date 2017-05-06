@@ -37,6 +37,7 @@ public:
   virtual bool setObjective(Objective o, BWAPI::Position p);
   virtual bool setObjective(Objective o, BWAPI::Unit u);
   virtual void resetObjective();
+  virtual Objective getObjective();
 
   const BWAPI::Unit unit;
 

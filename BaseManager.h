@@ -41,6 +41,8 @@ private:
 
   std::vector<std::weak_ptr<DroneHandler>> drones;
   std::vector<std::shared_ptr<Mineral>> minerals;
+  // TODO should be a vector since some bases have doublegas...
+  BWAPI::Unit vespene;
 
 public:
   BaseManager(const BWAPI::Unit unit);

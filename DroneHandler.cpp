@@ -62,9 +62,25 @@ void DroneHandler::update()
       if (targetUnit == nullptr)
         break;
       unit->gather(targetUnit);
-      state = GatherState::MOVE_TO_MINERALS;
+      // hurgghh since basemanager is using this to reassign us...
+      if (targetUnit->getType() == BWAPI::UnitTypes::Zerg_Extractor)
+      {
+        state = GatherState::GAS;
+        objective = Objective::GATHER_GAS;
+      }
+      else
+        state = GatherState::MOVE_TO_MINERALS;
       break;
     }
+    break;
+  case Objective::GATHER_GAS:
+    if (!targetUnit->exists() || targetUnit->getResources() == 0)
+    {
+      state = GatherState::DEFAULT;
+      resetObjective();
+    }
+    if (unit->isIdle())
+      unit->gather(targetUnit);
     break;
   }
 
@@ -86,6 +102,9 @@ void DroneHandler::update()
 bool DroneHandler::setObjective(Objective o, BWAPI::Unit u)
 {
   // gathering objectives
+  if (o == Objective::GATHER_GAS)
+    state = GatherState::GAS;
+
   if (o >= Objective::GATHER_MINERALS && o <= Objective::GATHER_GAS)
     return UnitHandler::setObjective(o, u);
 

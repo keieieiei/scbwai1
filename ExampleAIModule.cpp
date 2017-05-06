@@ -152,7 +152,7 @@ void ExampleAIModule::onStart()
   // if manual BO turned off, just set BO to FIVEPOOL for now
   else
   {
-    buildExecutor = std::make_shared<BuildExecutor>(BuildExecutor(BuildOrder::FIVEPOOL));
+    buildExecutor = std::make_shared<BuildExecutor>(BuildExecutor(BuildOrder::NINEPOOLSPEED));
   }
   
   buildExecutor->giveMainManager(mainManager);
