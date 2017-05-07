@@ -52,7 +52,8 @@ public:
   void updateUnitInfo(BWAPI::Unit u);
 
   std::vector<UnitInfo> getEnemyBuildings();
-
+  // return number for now, if necessary can create a separate list of flying enemies only with more specific info
+  int getNumEnemyFlyers();
 
   static InfoManager & Instance(){
     static InfoManager instance;

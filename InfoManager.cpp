@@ -166,6 +166,19 @@ std::vector<UnitInfo> InfoManager::getEnemyBuildings()
   return res;
 }
 
+int InfoManager::getNumEnemyFlyers()
+{
+  int num = 0;
+  for (auto ui : enemyUnitsInfo)
+  {
+    if (ui.getType().isFlyer())
+    {
+      num++;
+    }
+  }
+  return num;
+}
+
 ////////////////////////// Util ////////////////////////////////////
 void InfoManager::setCurrentVar(BWAPI::Unit u)
 {

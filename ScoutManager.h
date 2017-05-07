@@ -53,6 +53,8 @@ private:
   std::vector<BWAPI::Unit> drones;
   BWAPI::Position enemyMain;
   std::vector<BWAPI::Position> startingLocations;
+  // vector of base locations (including starting) sorted by ground distance
+  std::vector<BWTA::BaseLocation*> baseLocations;
   //hackityhack
   bool mainExplored = false;
 public:
@@ -70,6 +72,7 @@ public:
   bool isMainExplored();
   bool isMainFound();
   int numDrones();
+  std::vector<BWTA::BaseLocation*> getSortedBaseLocations();
   /*
   // dynamic scout condition functions - obsolete
   scdef getScoutConditionFunction(BuildOrder bo);

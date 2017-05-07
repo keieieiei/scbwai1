@@ -11,6 +11,35 @@ ScoutManager::ScoutManager()
   std::sort(std::begin(startingLocations), std::end(startingLocations),
     [&pos](BWAPI::Position &a, BWAPI::Position &b){ return pos.getDistance(a) < pos.getDistance(b); });
 
+  //////////////////////////////////////
+  // populate baseLocations with a list of base locations, as per BWTA, sorted by distance from the player's starting location
+  
+  // create a std::set copy to pass to getGroundDistances
+  std::set<BWAPI::TilePosition> targets;
+
+  // get the BaseLocation of the player's starting location/main base
+  const BWTA::BaseLocation *playerMain = BWTA::getStartLocation(BWAPI::Broodwar->self());
+  printf("main at %d, %d\n", playerMain->getPosition().x, playerMain->getPosition().y);
+
+  // store baselocations into a vector (for sorting and using later) and a set (to pass to getGroundDistances)
+  for (BWTA::BaseLocation *b : BWTA::getBaseLocations())
+  {
+    baseLocations.push_back(b);
+    targets.insert(b->getTilePosition());
+  }
+
+  // get a map of distances from the main base to all bases
+  std::map<BWAPI::TilePosition, double> blmap = BWTA::getGroundDistances(playerMain->getTilePosition(), targets);
+  // sort the vector, passing the map (for now)
+  std::sort(baseLocations.begin(), baseLocations.end(),
+    [blmap](const BWTA::BaseLocation *a, const BWTA::BaseLocation *b){ return blmap.find(a->getTilePosition())->second < blmap.find(b->getTilePosition())->second; });
+
+  // debug sorted base locations
+  printf("Sorted base locations: \n");
+  for (BWTA::BaseLocation *b : baseLocations)
+    printf("dist from main: %f, pos x: %d, %d\n", BWTA::getGroundDistance(playerMain->getTilePosition(), b->getTilePosition()), b->getPosition().x, b->getPosition().y);
+
+  ///////////////////////////////////////////////////////////////
   // hackityhack
   mainExplored = false;
   printf("%d start locations found\n", BWTA::getStartLocations().size());
@@ -48,15 +77,16 @@ void ScoutManager::update()
 
 void ScoutManager::findEnemyBase()
 {
-  // is this working? i have no idea. the case is so rare i'm not seeing happen r.i.p.
-  // update: seen it once; but the entire map was discovered but no enemy to be found....  wtf?
+  BWAPI::Position p;
   // we've found and destroyed main but the game hasn't ended; search; super super super hacky lazy way
-  for (const BWTA::BaseLocation *b : BWTA::getBaseLocations())
+  for (BWTA::BaseLocation *b : baseLocations)
   {
     if (!BWAPI::Broodwar->isExplored(b->getTilePosition()))
     {
       for (auto u : overlords)
       {
+        //TODO: walk up to mineral not working as expected atm
+        //overlords.back()->setObjective(Objective::REVEAL_TILE, b->getStaticMinerals().getPosition());
         overlords.back()->setObjective(Objective::REVEAL_TILE, b->getPosition());
       }
       continue;
@@ -128,6 +158,11 @@ bool ScoutManager::isMainFound()
 int ScoutManager::numDrones()
 {
   return drones.size();
+}
+
+std::vector<BWTA::BaseLocation*> ScoutManager::getSortedBaseLocations()
+{
+  return baseLocations;
 }
 
 /* dynamic scout condition functions - obsolete

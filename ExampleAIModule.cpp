@@ -33,10 +33,13 @@ static std::unordered_map<Unit, std::shared_ptr<UnitHandler>> unitLookup;
 // build order input
 bool manualBO = false;
 
+char res[2];
+HWND gameWindow;
+
 void ExampleAIModule::onStart()
 {
   // sloppy way of grabbing the game window
-  HWND gameWindow = GetForegroundWindow();
+  gameWindow = GetForegroundWindow();
 
   // open a console for printing debug msgs
   FILE *df;
@@ -499,32 +502,35 @@ void ExampleAIModule::onSendText(std::string text)
   // otherwise you may run into problems when you use the %(percent) character!
 
   //debug trigger
-  if (text == "print enemy") {
+  if (text == "print enemy")
     InfoManager::Instance().debugUnits("enemy");
-  }
   else if (text == "print player")
-  {
     InfoManager::Instance().debugUnits("player");
-  }
   else if (text == "debug IM on")
-  {
     InfoManager::Instance().setDebug(true);
-  }
   else if (text == "debug IM off")
-  {
     InfoManager::Instance().setDebug(false);
-  }
   else if (text == "debug UI off")
-  {
     UnitInfo::setDebug(false);
-  }
   else if (text == "debug UI on")
-  {
     UnitInfo::setDebug(true);
-  }
   else if (text == "debug enemy buildings")
-  {
     InfoManager::Instance().debugEnemyBuildings();
+  else if (text == "pause")
+  {
+    Broodwar->pauseGame();
+    SetForegroundWindow(GetConsoleWindow());
+    while (strcmp(res, "Y") != 0)
+    {
+      printf("Resume game? Y/N: ");
+      scanf_s("%2s", res);
+    }
+    if (strcmp(res, "Y") == 0)
+    {
+      Broodwar->resumeGame();
+      res[0] = 'N';
+      SetForegroundWindow(gameWindow);
+    }
   }
 }
 
